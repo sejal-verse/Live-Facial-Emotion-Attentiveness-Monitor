@@ -3,49 +3,71 @@ import { FaRobot } from "react-icons/fa";
 
 function Navbar() {
   return (
-    <nav className="flex justify-between items-center px-10 py-5 shadow-md bg-white sticky top-0 z-50">
+    <nav className="sticky top-0 z-50 bg-white shadow-md">
+      <div className="max-w-7xl mx-auto flex items-center justify-between px-8 py-4">
 
-      {/* Logo */}
-      <Link
-        to="/"
-        className="flex items-center gap-2 text-3xl font-bold text-blue-600"
-      >
-        <FaRobot />
-        AI Smart Classroom
-      </Link>
-
-      {/* Menu */}
-      <div className="flex gap-10 text-lg font-medium">
-
-        <Link to="/">Home</Link>
-
-        <Link to="/classroom">Classroom</Link>
-
-        <Link to="/reports">Reports</Link>
-
-        <Link to="/contact">Contact</Link>
-
-      </div>
-
-      {/* Buttons */}
-      <div className="flex gap-4">
-
+        {/* Logo */}
         <Link
-          to="/login"
-          className="border border-gray-400 px-6 py-2 rounded-lg hover:bg-gray-100"
+          to="/"
+          className="flex items-center gap-3 text-3xl font-bold text-blue-700"
         >
-          Login
+          <FaRobot className="text-4xl" />
+          AI Smart Classroom
         </Link>
 
-        <Link
-          to="/register"
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-        >
-          Get Started
-        </Link>
+        {/* Navigation Links */}
+        <div className="hidden md:flex items-center gap-8 text-lg font-medium">
+
+          <Link
+            to="/"
+            className="hover:text-blue-600 transition duration-300"
+          >
+            Home
+          </Link>
+
+          <Link
+            to="/classroom"
+            className="hover:text-blue-600 transition duration-300"
+          >
+            Classroom
+          </Link>
+
+          <Link
+            to="/reports"
+            className="hover:text-blue-600 transition duration-300"
+          >
+            Reports
+          </Link>
+
+          <Link
+            to="/contact"
+            className="hover:text-blue-600 transition duration-300"
+          >
+            Contact
+          </Link>
+
+        </div>
+
+        {/* Buttons */}
+        <div className="flex items-center gap-4">
+
+          <Link
+            to="/login"
+            className="border border-blue-600 text-blue-600 px-5 py-2 rounded-lg hover:bg-blue-600 hover:text-white transition duration-300"
+          >
+            Login
+          </Link>
+
+          <Link
+            to="/register"
+            className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition duration-300"
+          >
+            Get Started
+          </Link>
+
+        </div>
 
       </div>
-
     </nav>
   );
 }
