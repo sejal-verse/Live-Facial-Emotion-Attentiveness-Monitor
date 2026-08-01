@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 px-4">
@@ -64,6 +66,8 @@ function Login() {
           </div>
 
           <button
+            type="button"
+            onClick={() => navigate("/student")}
             className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition"
           >
             Login
@@ -73,9 +77,12 @@ function Login() {
 
         <p className="text-center mt-6">
           Don't have an account?{" "}
-          <span className="text-blue-600 cursor-pointer">
+          <Link
+            to="/register"
+            className="text-blue-600 font-semibold hover:underline"
+          >
             Register
-          </span>
+          </Link>
         </p>
 
       </div>
