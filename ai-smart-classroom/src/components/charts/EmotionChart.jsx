@@ -7,42 +7,32 @@ import {
 
 import { Pie } from "react-chartjs-2";
 
-ChartJS.register(
-  ArcElement,
-  Tooltip,
-  Legend
-);
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 function EmotionChart() {
   const data = {
-    labels: ["Happy", "Neutral", "Confused", "Sad"],
+    labels: ["Happy", "Neutral", "Sad", "Focused"],
     datasets: [
       {
-        data: [45, 30, 15, 10],
+        data: [45, 25, 10, 20],
         backgroundColor: [
           "#22c55e",
           "#3b82f6",
-          "#f59e0b",
           "#ef4444",
+          "#f59e0b",
         ],
       },
     ],
   };
 
-  const options = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: "bottom",
-      },
-      title: {
-        display: true,
-        text: "Student Emotions",
-      },
-    },
-  };
-
-  return <Pie data={data} options={options} />;
+  return (
+    <Pie
+      data={data}
+      options={{
+        responsive: true,
+      }}
+    />
+  );
 }
 
 export default EmotionChart;

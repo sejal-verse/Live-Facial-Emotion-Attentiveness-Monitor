@@ -26,30 +26,28 @@ function AttendanceChart() {
     labels: ["Mon", "Tue", "Wed", "Thu", "Fri"],
     datasets: [
       {
-        label: "Attendance %",
-        data: [90, 94, 92, 96, 98],
+        label: "Attention %",
+        data: [82, 88, 91, 89, 95],
         borderColor: "#2563eb",
-        backgroundColor: "rgba(37,99,235,0.2)",
+        backgroundColor: "rgba(37,99,235,0.3)",
         tension: 0.4,
-        fill: true,
       },
     ],
   };
 
-  const options = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: "top",
-      },
-      title: {
-        display: true,
-        text: "Weekly Attendance",
-      },
-    },
-  };
-
-  return <Line data={data} options={options} />;
+  return (
+    <Line
+      data={data}
+      options={{
+        responsive: true,
+        plugins: {
+          legend: {
+            position: "top",
+          },
+        },
+      }}
+    />
+  );
 }
 
 export default AttendanceChart;
