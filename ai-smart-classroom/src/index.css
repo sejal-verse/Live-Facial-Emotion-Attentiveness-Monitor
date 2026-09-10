@@ -1,1 +1,63 @@
 @import "tailwindcss";
+
+/* Page */
+
+.page {
+    margin-left: 230px;
+    padding: 30px;
+}
+
+
+/* Sidebar Links */
+
+.sidebar a {
+    display: block;
+    color: white;
+    text-decoration: none;
+    padding: 15px 5px;
+}
+
+.sidebar a:hover {
+    background: #334155;
+}
+
+
+/* Tables */
+
+table {
+    width: 100%;
+    margin-top: 30px;
+    background: white;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 15px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+th {
+    background: #e5e7eb;
+}
+
+
+/* Monitoring */
+
+.monitor-box {
+    background: white;
+    padding: 30px;
+    margin-top: 30px;
+    border-radius: 10px;
+}
+
+
+/* Reports */
+
+.report-box {
+    background: white;
+    padding: 30px;
+    margin-top: 30px;
+    border-radius: 10px;
+}

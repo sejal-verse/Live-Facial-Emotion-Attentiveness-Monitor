@@ -1,40 +1,56 @@
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import React from "react";
 
-import Navbar from "./components/layout/Navbar";
+import {
+    BrowserRouter,
+    Routes,
+    Route
+} from "react-router-dom";
 
-import Home from "./pages/Home/home";
-import Contact from "./pages/Contact";
-import Login from "./pages/login/login";
-import Register from "./pages/register/register";
-import Student from "./pages/student/student";
+import TeacherDashboard from "./pages/TeacherDashboard";
+import Attendance from "./pages/Attendance";
+import Monitoring from "./pages/Monitoring";
+import Analytics from "./pages/Analytics";
+import Reports from "./pages/Reports";
 
-function Layout() {
-  const location = useLocation();
-
-  const hideNavbar =
-    location.pathname === "/student";
-
-  return (
-    <>
-      {!hideNavbar && <Navbar />}
-
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/student" element={<Student />} />
-      </Routes>
-    </>
-  );
-}
 
 function App() {
-  return (
-    <BrowserRouter>
-      <Layout />
-    </BrowserRouter>
-  );
+
+    return (
+
+        <BrowserRouter>
+
+            <Routes>
+
+                <Route
+                    path="/"
+                    element={<TeacherDashboard />}
+                />
+
+                <Route
+                    path="/attendance"
+                    element={<Attendance />}
+                />
+
+                <Route
+                    path="/monitoring"
+                    element={<Monitoring />}
+                />
+
+                <Route
+                    path="/analytics"
+                    element={<Analytics />}
+                />
+
+                <Route
+                    path="/reports"
+                    element={<Reports />}
+                />
+
+            </Routes>
+
+        </BrowserRouter>
+
+    );
 }
 
 export default App;
