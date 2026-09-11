@@ -1,56 +1,59 @@
-import React from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import {
-    BrowserRouter,
-    Routes,
-    Route
-} from "react-router-dom";
-
+// Pages
 import TeacherDashboard from "./pages/TeacherDashboard";
 import Attendance from "./pages/Attendance";
 import Monitoring from "./pages/Monitoring";
 import Analytics from "./pages/Analytics";
 import Reports from "./pages/Reports";
-
+import StudentRegistration from "./pages/StudentRegistration";
 
 function App() {
+  return (
+    <BrowserRouter>
 
-    return (
+      <Routes>
 
-        <BrowserRouter>
+        {/* Teacher Dashboard */}
+        <Route
+          path="/"
+          element={<TeacherDashboard />}
+        />
 
-            <Routes>
+        {/* Attendance */}
+        <Route
+          path="/attendance"
+          element={<Attendance />}
+        />
 
-                <Route
-                    path="/"
-                    element={<TeacherDashboard />}
-                />
+        {/* Live Monitoring */}
+        <Route
+          path="/monitoring"
+          element={<Monitoring />}
+        />
 
-                <Route
-                    path="/attendance"
-                    element={<Attendance />}
-                />
+        {/* Analytics */}
+        <Route
+          path="/analytics"
+          element={<Analytics />}
+        />
 
-                <Route
-                    path="/monitoring"
-                    element={<Monitoring />}
-                />
+        {/* AI Reports */}
+        <Route
+          path="/reports"
+          element={<Reports />}
+        />
 
-                <Route
-                    path="/analytics"
-                    element={<Analytics />}
-                />
+        {/* Student Registration */}
+        <Route
+          path="/students"
+          element={<StudentRegistration />}
+        />
 
-                <Route
-                    path="/reports"
-                    element={<Reports />}
-                />
+      </Routes>
 
-            </Routes>
-
-        </BrowserRouter>
-
-    );
+    </BrowserRouter>
+  );
 }
 
 export default App;
