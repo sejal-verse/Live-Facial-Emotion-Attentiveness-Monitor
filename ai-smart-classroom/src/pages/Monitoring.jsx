@@ -2,98 +2,68 @@ import { useEffect, useRef, useState } from "react";
 import * as faceapi from "face-api.js";
 
 function Monitoring() {
-
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
   const [monitoring, setMonitoring] = useState(false);
   const [students, setStudents] = useState([]);
   const [error, setError] = useState("");
+  const [modelsLoaded, setModelsLoaded] = useState(false);
 
-  const [modelsLoaded, setModelsLoaded] =
-    useState(false);
-
-  // Load AI models
+  // ==========================================
+  // LOAD AI MODELS
+  // ==========================================
   useEffect(() => {
-
     const loadModels = async () => {
-
       try {
+        await faceapi.nets.tinyFaceDetector.loadFromUri("/models");
 
-        await faceapi.nets.tinyFaceDetector.loadFromUri(
-          "/models"
-        );
+        await faceapi.nets.faceLandmark68Net.loadFromUri("/models");
 
-        await faceapi.nets.faceLandmark68Net.loadFromUri(
-          "/models"
-        );
+        await faceapi.nets.faceExpressionNet.loadFromUri("/models");
 
-        await faceapi.nets.faceExpressionNet.loadFromUri(
-          "/models"
-        );
-
-        await faceapi.nets.faceRecognitionNet.loadFromUri(
-          "/models"
-        );
+        await faceapi.nets.faceRecognitionNet.loadFromUri("/models");
 
         setModelsLoaded(true);
 
         console.log("All AI models loaded");
-
       } catch (error) {
+        console.error("Model loading error:", error);
 
-        console.error(
-          "Model loading error:",
-          error
-        );
-
-        setError(
-          "Unable to load AI models."
-        );
+        setError("Unable to load AI models.");
       }
-
     };
 
     loadModels();
-
   }, []);
 
-
-  // Start camera
+  // ==========================================
+  // START CAMERA
+  // ==========================================
   const startCamera = async () => {
-
     try {
-
       setError("");
 
       if (!modelsLoaded) {
-        alert(
-          "AI models are still loading. Please wait."
-        );
+        alert("AI models are still loading. Please wait.");
         return;
       }
 
-      const registeredStudents =
-        JSON.parse(
-          localStorage.getItem(
-            "registeredStudents"
-          ) || "[]"
-        );
+      const registeredStudents = JSON.parse(
+        localStorage.getItem("registeredStudents") || "[]"
+      );
 
       if (registeredStudents.length === 0) {
-
         alert(
           "Please register at least one student before starting monitoring."
         );
-
         return;
       }
 
-      const stream =
-        await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false,
-        });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false,
+      });
 
       videoRef.current.srcObject = stream;
 
@@ -101,36 +71,46 @@ function Monitoring() {
 
       setMonitoring(true);
 
+      // Initial live monitoring data
       localStorage.setItem(
         "liveMonitoringData",
         JSON.stringify({
           monitoring: true,
+          monitoringActive: true,
+
           studentsPresent: 0,
+
           averageAttention: 0,
+
           mainEmotion: "Waiting",
+
+          distracted: 0,
+
           distractedCount: 0,
+
           students: [],
+
+          // IMPORTANT:
+          // Used by Student Dashboard
+          studentPerformance: [],
+
           updatedAt: Date.now(),
         })
       );
-
     } catch (err) {
-
       console.error(err);
 
       setError(
         "Unable to access camera. Please allow camera permission."
       );
     }
-
   };
 
-
-  // Stop camera
+  // ==========================================
+  // STOP CAMERA
+  // ==========================================
   const stopCamera = () => {
-
     if (streamRef.current) {
-
       streamRef.current
         .getTracks()
         .forEach((track) => track.stop());
@@ -146,28 +126,38 @@ function Monitoring() {
 
     setStudents([]);
 
+    // Reset live monitoring data
     localStorage.setItem(
       "liveMonitoringData",
       JSON.stringify({
         monitoring: false,
+        monitoringActive: false,
+
         studentsPresent: 0,
+
         averageAttention: 0,
+
         mainEmotion: "Not Monitoring",
+
+        distracted: 0,
+
         distractedCount: 0,
+
         students: [],
+
+        // IMPORTANT:
+        // Clear Student Dashboard live data
+        studentPerformance: [],
+
         updatedAt: Date.now(),
       })
     );
-
   };
 
-
-  // Calculate attention
-  const calculateAttention = (
-    detection,
-    video
-  ) => {
-
+  // ==========================================
+  // CALCULATE ATTENTION
+  // ==========================================
+  const calculateAttention = (detection, video) => {
     const box = detection.detection.box;
 
     const faceCenterX =
@@ -183,73 +173,50 @@ function Monitoring() {
       video.videoHeight / 2;
 
     const horizontalDifference =
-      Math.abs(
-        faceCenterX - videoCenterX
-      ) / video.videoWidth;
+      Math.abs(faceCenterX - videoCenterX) /
+      video.videoWidth;
 
     const verticalDifference =
-      Math.abs(
-        faceCenterY - videoCenterY
-      ) / video.videoHeight;
+      Math.abs(faceCenterY - videoCenterY) /
+      video.videoHeight;
 
     let positionScore;
 
     if (horizontalDifference < 0.1) {
-
       positionScore = 100;
-
     } else if (horizontalDifference < 0.2) {
-
       positionScore = 85;
-
     } else if (horizontalDifference < 0.3) {
-
       positionScore = 65;
-
     } else {
-
       positionScore = 40;
-
     }
 
     if (verticalDifference > 0.3) {
       positionScore -= 15;
     }
 
-
     // Face landmarks
-    const landmarks =
-      detection.landmarks;
+    const landmarks = detection.landmarks;
 
-    const nose =
-      landmarks.getNose();
+    const nose = landmarks.getNose();
 
-    const noseX =
-      nose[3].x;
+    const noseX = nose[3].x;
 
     const noseDifference =
-      Math.abs(
-        noseX - videoCenterX
-      ) / video.videoWidth;
+      Math.abs(noseX - videoCenterX) /
+      video.videoWidth;
 
     let landmarkScore;
 
     if (noseDifference < 0.08) {
-
       landmarkScore = 100;
-
     } else if (noseDifference < 0.18) {
-
       landmarkScore = 85;
-
     } else if (noseDifference < 0.28) {
-
       landmarkScore = 65;
-
     } else {
-
       landmarkScore = 40;
-
     }
 
     let finalScore =
@@ -267,13 +234,13 @@ function Monitoring() {
     return finalScore;
   };
 
-
-  // Recognize registered student
+  // ==========================================
+  // RECOGNIZE REGISTERED STUDENT
+  // ==========================================
   const recognizeStudent = async (
     detection,
     registeredStudents
   ) => {
-
     if (
       !detection.descriptor ||
       registeredStudents.length === 0
@@ -282,12 +249,10 @@ function Monitoring() {
     }
 
     let bestStudent = null;
+
     let bestDistance = Infinity;
 
-    for (
-      const student of registeredStudents
-    ) {
-
+    for (const student of registeredStudents) {
       if (!student.descriptor) {
         continue;
       }
@@ -304,7 +269,6 @@ function Monitoring() {
         );
 
       if (distance < bestDistance) {
-
         bestDistance = distance;
 
         bestStudent = student;
@@ -316,27 +280,22 @@ function Monitoring() {
       bestStudent &&
       bestDistance < 0.55
     ) {
-
       return {
         ...bestStudent,
         distance: bestDistance,
       };
-
     }
 
     return null;
   };
 
-
-  // Save dashboard data
-  const saveLiveDashboardData = (
-    studentList
-  ) => {
-
+  // ==========================================
+  // SAVE LIVE DASHBOARD DATA
+  // ==========================================
+  const saveLiveDashboardData = (studentList) => {
     let averageAttention = 0;
 
     if (studentList.length > 0) {
-
       const totalAttention =
         studentList.reduce(
           (sum, student) =>
@@ -351,29 +310,24 @@ function Monitoring() {
         );
     }
 
-
-    // Emotion count
+    // ==========================================
+    // EMOTION COUNT
+    // ==========================================
     const emotionCount = {};
 
-    studentList.forEach(
-      (student) => {
+    studentList.forEach((student) => {
+      const emotion = student.emotion;
 
-        const emotion =
-          student.emotion;
-
-        emotionCount[emotion] =
-          (emotionCount[emotion] || 0) +
-          1;
-      }
-    );
-
+      emotionCount[emotion] =
+        (emotionCount[emotion] || 0) +
+        1;
+    });
 
     let mainEmotion = "None";
 
     if (
       Object.keys(emotionCount).length > 0
     ) {
-
       mainEmotion =
         Object.keys(
           emotionCount
@@ -385,8 +339,9 @@ function Monitoring() {
         );
     }
 
-
-    // Distracted count
+    // ==========================================
+    // DISTRACTED COUNT
+    // ==========================================
     const distractedCount =
       studentList.filter(
         (student) =>
@@ -394,13 +349,62 @@ function Monitoring() {
           "Distracted"
       ).length;
 
+    // ==========================================
+    // IMPORTANT CONNECTION
+    // Only recognized students are sent
+    // to Student Dashboard
+    // ==========================================
+    const studentPerformance =
+      studentList
+        .filter(
+          (student) =>
+            student.recognized
+        )
+        .map((student) => ({
+          id: student.id,
 
+          name: student.name,
+
+          rollNo: student.rollNo || "",
+
+          attention:
+            student.attentionScore,
+
+          attentionScore:
+            student.attentionScore,
+
+          attentionStatus:
+            student.attentionStatus,
+
+          emotion:
+            student.emotion,
+
+          emotionConfidence:
+            student.emotionConfidence,
+
+          distraction:
+            student.distraction,
+
+          recognized:
+            student.recognized,
+
+          attendance:
+            student.attendance,
+        }));
+
+    // ==========================================
+    // COMPLETE DASHBOARD DATA
+    // ==========================================
     const dashboardData = {
-
       monitoring: true,
 
+      monitoringActive: true,
+
       studentsPresent:
-        studentList.length,
+        studentList.filter(
+          (student) =>
+            student.recognized
+        ).length,
 
       averageAttention:
         averageAttention,
@@ -408,40 +412,45 @@ function Monitoring() {
       mainEmotion:
         mainEmotion,
 
+      distracted:
+        distractedCount,
+
       distractedCount:
         distractedCount,
 
+      // Teacher Dashboard
       students:
         studentList,
+
+      // Student Dashboard
+      studentPerformance:
+        studentPerformance,
 
       updatedAt:
         Date.now(),
     };
 
-
+    // Save to localStorage
     localStorage.setItem(
       "liveMonitoringData",
       JSON.stringify(
         dashboardData
       )
     );
-
   };
 
-
-  // Detection loop
+  // ==========================================
+  // DETECTION LOOP
+  // ==========================================
   useEffect(() => {
-
     let interval;
 
     if (!monitoring) {
       return;
     }
 
-
     interval = setInterval(
       async () => {
-
         if (
           !videoRef.current ||
           videoRef.current.readyState < 2
@@ -449,9 +458,7 @@ function Monitoring() {
           return;
         }
 
-
         try {
-
           const registeredStudents =
             JSON.parse(
               localStorage.getItem(
@@ -459,44 +466,46 @@ function Monitoring() {
               ) || "[]"
             );
 
-
           const detections =
             await faceapi
               .detectAllFaces(
                 videoRef.current,
-                new faceapi.TinyFaceDetectorOptions({
-                  inputSize: 320,
-                  scoreThreshold: 0.5,
-                })
+                new faceapi.TinyFaceDetectorOptions(
+                  {
+                    inputSize: 320,
+                    scoreThreshold: 0.5,
+                  }
+                )
               )
               .withFaceLandmarks()
               .withFaceExpressions()
               .withFaceDescriptors();
 
+          const studentList = [];
 
-          const studentList =
-            [];
-
-
+          // ==========================================
+          // PROCESS EACH FACE
+          // ==========================================
           for (
             let index = 0;
             index < detections.length;
             index++
           ) {
-
             const detection =
               detections[index];
 
-
-            // Recognize face
+            // ------------------------------------------
+            // RECOGNIZE STUDENT
+            // ------------------------------------------
             const recognizedStudent =
               await recognizeStudent(
                 detection,
                 registeredStudents
               );
 
-
-            // Emotion
+            // ------------------------------------------
+            // EMOTION
+            // ------------------------------------------
             const expressions =
               detection.expressions;
 
@@ -511,70 +520,75 @@ function Monitoring() {
                     : b
               );
 
-
             const emotionConfidence =
               Math.round(
                 expressions[emotion] *
                   100
               );
 
-
-            // Attention
+            // ------------------------------------------
+            // ATTENTION
+            // ------------------------------------------
             const attentionScore =
               calculateAttention(
                 detection,
                 videoRef.current
               );
 
-
             let attentionStatus;
 
             if (
               attentionScore >= 80
             ) {
-
               attentionStatus =
                 "High";
-
             } else if (
               attentionScore >= 60
             ) {
-
               attentionStatus =
                 "Medium";
-
             } else {
-
               attentionStatus =
                 "Low";
             }
 
-
-            // Distraction
+            // ------------------------------------------
+            // DISTRACTION
+            // ------------------------------------------
             const distraction =
               attentionScore < 60
                 ? "Distracted"
                 : "Not Distracted";
 
-
-            // Name
+            // ------------------------------------------
+            // STUDENT NAME
+            // ------------------------------------------
             const studentName =
               recognizedStudent
                 ? recognizedStudent.name
-                : `Unknown Student ${index + 1}`;
+                : `Unknown Student ${
+                    index + 1
+                  }`;
 
-
+            // ------------------------------------------
+            // STUDENT ID
+            // ------------------------------------------
             const studentId =
               recognizedStudent
                 ? recognizedStudent.id
                 : `unknown-${index + 1}`;
 
-
+            // ------------------------------------------
+            // STUDENT DATA
+            // ------------------------------------------
             studentList.push({
-
               id: studentId,
 
               name: studentName,
+
+              rollNo:
+                recognizedStudent?.rollNo ||
+                "",
 
               recognized:
                 recognizedStudent
@@ -597,24 +611,24 @@ function Monitoring() {
                 distraction,
 
               attendance:
-                "Present",
-
+                recognizedStudent
+                  ? "Present"
+                  : "Not Recorded",
             });
-
           }
 
+          // ==========================================
+          // UPDATE MONITORING SCREEN
+          // ==========================================
+          setStudents(studentList);
 
-          setStudents(
-            studentList
-          );
-
-
-          // Save attendance
+          // ==========================================
+          // SAVE ATTENDANCE
+          // ==========================================
           const today =
             new Date()
               .toISOString()
               .split("T")[0];
-
 
           const attendanceData =
             JSON.parse(
@@ -623,31 +637,23 @@ function Monitoring() {
               ) || "{}"
             );
 
-
           if (
             !attendanceData[today]
           ) {
-
-            attendanceData[today] =
-              {};
+            attendanceData[today] = {};
           }
-
 
           studentList.forEach(
             (student) => {
-
               if (
                 student.recognized
               ) {
-
                 attendanceData[today][
                   student.name
                 ] = "Present";
               }
-
             }
           );
-
 
           localStorage.setItem(
             "classAttendance",
@@ -656,45 +662,34 @@ function Monitoring() {
             )
           );
 
-
-          // Dashboard
+          // ==========================================
+          // SAVE LIVE DASHBOARD DATA
+          // ==========================================
           saveLiveDashboardData(
             studentList
           );
 
-
         } catch (error) {
-
           console.error(
             "Detection error:",
             error
           );
-
         }
-
       },
       1000
     );
 
-
     return () => {
-
-      clearInterval(
-        interval
-      );
-
+      clearInterval(interval);
     };
-
   }, [monitoring]);
 
-
-  // Cleanup camera
+  // ==========================================
+  // CLEANUP CAMERA
+  // ==========================================
   useEffect(() => {
-
     return () => {
-
       if (streamRef.current) {
-
         streamRef.current
           .getTracks()
           .forEach(
@@ -702,78 +697,65 @@ function Monitoring() {
               track.stop()
           );
       }
-
     };
-
   }, []);
 
-
+  // ==========================================
+  // UI
+  // ==========================================
   return (
-
     <div className="page-container">
 
-      {/* Header */}
+      {/* HEADER */}
       <div className="monitor-header">
 
         <div>
-
           <h1>
             Live Monitoring
           </h1>
 
           <p>
             Real-time student emotion,
-            attention and attendance monitoring
+            attention and attendance
+            monitoring
           </p>
-
         </div>
-
 
         <span
           className={`monitor-status ${
-            monitoring
-              ? "active"
-              : ""
+            monitoring ? "active" : ""
           }`}
         >
-
           {monitoring
             ? "🟢 Monitoring Active"
             : "⚪ Not Active"}
-
         </span>
 
       </div>
 
-
-      {/* Camera */}
+      {/* CAMERA */}
       <div className="camera-card">
 
         <div className="card-title">
 
           <div>
-
             <h2>
               Classroom Camera
             </h2>
 
             <p>
-              AI-powered classroom monitoring
+              AI-powered classroom
+              monitoring
             </p>
-
           </div>
 
-
           {monitoring && (
-
             <span className="camera-live">
               ● LIVE
             </span>
-
           )}
 
         </div>
-
 
         <div className="camera-area">
 
@@ -785,9 +767,7 @@ function Monitoring() {
             className="camera-video"
           />
 
-
           {!monitoring && (
-
             <div className="camera-placeholder">
 
               <div className="camera-icon">
@@ -799,59 +779,49 @@ function Monitoring() {
               </h3>
 
               <p>
-                Start monitoring to analyze students
+                Start monitoring to
+                analyze students
               </p>
 
             </div>
-
           )}
 
         </div>
 
-
         {error && (
-
           <div className="camera-error">
             {error}
           </div>
-
         )}
-
 
         <div className="camera-controls">
 
           {!monitoring ? (
-
             <button
               className="monitor-button"
               onClick={startCamera}
             >
               ▶ Start Monitoring
             </button>
-
           ) : (
-
             <button
               className="stop-button"
               onClick={stopCamera}
             >
               ■ Stop Monitoring
             </button>
-
           )}
 
         </div>
 
       </div>
 
-
-      {/* AI Status */}
+      {/* AI STATUS */}
       <div className="ai-monitor-status">
 
         <h2>
           AI Monitoring Status
         </h2>
-
 
         <div className="ai-status-grid">
 
@@ -867,7 +837,6 @@ function Monitoring() {
             </strong>
           </div>
 
-
           <div>
             <span>
               Face Recognition
@@ -880,7 +849,6 @@ function Monitoring() {
             </strong>
           </div>
 
-
           <div>
             <span>
               Emotion Detection
@@ -892,7 +860,6 @@ function Monitoring() {
                 : "Inactive"}
             </strong>
           </div>
-
 
           <div>
             <span>
@@ -910,19 +877,16 @@ function Monitoring() {
 
       </div>
 
-
-      {/* Classroom Overview */}
+      {/* CLASSROOM OVERVIEW */}
       <div className="ai-monitor-status">
 
         <h2>
           Classroom Overview
         </h2>
 
-
         <div className="ai-status-grid">
 
           <div>
-
             <span>
               Students Detected
             </span>
@@ -930,12 +894,9 @@ function Monitoring() {
             <strong>
               {students.length}
             </strong>
-
           </div>
 
-
           <div>
-
             <span>
               Recognized
             </span>
@@ -948,12 +909,9 @@ function Monitoring() {
                 ).length
               }
             </strong>
-
           </div>
 
-
           <div>
-
             <span>
               Distracted
             </span>
@@ -967,12 +925,9 @@ function Monitoring() {
                 ).length
               }
             </strong>
-
           </div>
 
-
           <div>
-
             <span>
               High Attention
             </span>
@@ -986,21 +941,18 @@ function Monitoring() {
                 ).length
               }
             </strong>
-
           </div>
 
         </div>
 
       </div>
 
-
-      {/* Student Cards */}
+      {/* IDENTIFIED STUDENTS */}
       <div className="ai-monitor-status">
 
         <h2>
           Identified Students
         </h2>
-
 
         {students.length === 0 ? (
 
@@ -1011,8 +963,9 @@ function Monitoring() {
             </p>
 
             <span>
-              Make sure registered students
-              are visible to the camera.
+              Make sure registered
+              students are visible to
+              the camera.
             </span>
 
           </div>
@@ -1035,7 +988,6 @@ function Monitoring() {
                       👤
                     </div>
 
-
                     <div>
 
                       <h3>
@@ -1052,7 +1004,6 @@ function Monitoring() {
 
                   </div>
 
-
                   <div className="student-detail">
 
                     <span>
@@ -1060,11 +1011,12 @@ function Monitoring() {
                     </span>
 
                     <strong className="status-good">
-                      ✓ Present
+                      {student.recognized
+                        ? "✓ Present"
+                        : "— Not Recorded"}
                     </strong>
 
                   </div>
-
 
                   <div className="student-detail">
 
@@ -1078,7 +1030,6 @@ function Monitoring() {
 
                   </div>
 
-
                   <div className="student-detail">
 
                     <span>
@@ -1091,7 +1042,6 @@ function Monitoring() {
 
                   </div>
 
-
                   <div className="student-detail">
 
                     <span>
@@ -1101,11 +1051,12 @@ function Monitoring() {
                     <strong>
                       {student.attentionScore}%
                       {" "}
-                      ({student.attentionStatus})
+                      (
+                      {student.attentionStatus}
+                      )
                     </strong>
 
                   </div>
-
 
                   <div className="student-detail">
 
@@ -1138,9 +1089,7 @@ function Monitoring() {
       </div>
 
     </div>
-
   );
-
 }
 
 export default Monitoring;

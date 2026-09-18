@@ -1,464 +1,1022 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 function Attendance() {
-
   const [students, setStudents] = useState([]);
-  const [search, setSearch] = useState("");
-  const [date, setDate] = useState(
+  const [attendance, setAttendance] = useState({});
+  const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+  const [search, setSearch] = useState("");
 
-  // Load attendance from localStorage
-  const loadAttendance = () => {
-
-    const attendanceData = JSON.parse(
-      localStorage.getItem("classAttendance") || "{}"
-    );
-
-    const todayAttendance =
-      attendanceData[date] || {};
-
+  // ================= LOAD STUDENTS =================
+  const loadStudents = () => {
     const registeredStudents = JSON.parse(
       localStorage.getItem("registeredStudents") || "[]"
     );
 
-    const studentList = registeredStudents.map(
-      (student) => {
-
-        const status =
-          todayAttendance[student.name] ||
-          "Absent";
-
-        return {
-          id: student.id,
-          name: student.name,
-          status: status,
-        };
-      }
-    );
-
-    setStudents(studentList);
+    setStudents(registeredStudents);
   };
 
+  // ================= LOAD ATTENDANCE =================
+  const loadAttendance = () => {
+    const savedAttendance = JSON.parse(
+      localStorage.getItem("classAttendance") || "{}"
+    );
 
-  // Load when page opens
+    setAttendance(savedAttendance);
+  };
+
   useEffect(() => {
-
+    loadStudents();
     loadAttendance();
 
-  }, [date]);
-
-
-  // Automatically refresh attendance
-  useEffect(() => {
-
+    // Refresh automatically
     const interval = setInterval(() => {
+      loadStudents();
       loadAttendance();
     }, 2000);
 
-    return () => {
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
+  }, []);
 
-  }, [date]);
+  // ================= TODAY'S ATTENDANCE =================
+  const todayAttendance =
+    attendance[selectedDate] || {};
 
+  // ================= FILTER STUDENTS =================
+  const filteredStudents = students.filter((student) => {
+    const text = search.toLowerCase();
 
-  // Search students
-  const filteredStudents = students.filter(
-    (student) =>
-      student.name
+    return (
+      (student.name || "")
         .toLowerCase()
-        .includes(search.toLowerCase()) ||
-      student.id
+        .includes(text) ||
+      (student.rollNo || "")
         .toLowerCase()
-        .includes(search.toLowerCase())
-  );
+        .includes(text) ||
+      (student.email || "")
+        .toLowerCase()
+        .includes(text)
+    );
+  });
 
-
-  // Statistics
-  const totalStudents = students.length;
-
-  const presentStudents = students.filter(
+  // ================= COUNTS =================
+  const presentCount = students.filter(
     (student) =>
-      student.status === "Present"
+      todayAttendance[student.name] === "Present"
   ).length;
 
-  const absentStudents =
-    totalStudents - presentStudents;
+  const absentCount =
+    students.length - presentCount;
 
   const attendancePercentage =
-    totalStudents > 0
+    students.length > 0
       ? Math.round(
-          (presentStudents /
-            totalStudents) *
-            100
+          (presentCount / students.length) * 100
         )
       : 0;
 
-
   return (
-    <div className="page-container">
+    <div style={styles.app}>
 
-      {/* Header */}
-      <div className="dashboard-header">
+      {/* ================= SIDEBAR ================= */}
+      <aside style={styles.sidebar}>
 
-        <div>
+        <div style={styles.logoSection}>
 
-          <h1>
-            Attendance
-          </h1>
+          <div style={styles.logoIcon}>
+            🤖
+          </div>
 
-          <p>
-            AI-powered student attendance
-            tracking.
-          </p>
+          <div>
+            <h2 style={styles.logoTitle}>
+              AI CLASSROOM
+            </h2>
+
+            <p style={styles.logoSubtitle}>
+              Smart Learning System
+            </p>
+          </div>
 
         </div>
 
-      </div>
+        <div style={styles.menuTitle}>
+          MAIN MENU
+        </div>
 
+        <nav>
 
-      {/* Date and Search */}
-      <div className="camera-card">
+          <Link
+            to="/dashboard"
+            style={styles.menuItem}
+          >
+            <span style={styles.menuIcon}>📊</span>
+            Dashboard
+          </Link>
 
-        <div className="attendance-controls">
+          <Link
+            to="/students"
+            style={styles.menuItem}
+          >
+            <span style={styles.menuIcon}>👥</span>
+            Students
+          </Link>
 
-          <div className="form-group">
+          <Link
+            to="/attendance"
+            style={{
+              ...styles.menuItem,
+              ...styles.activeMenuItem,
+            }}
+          >
+            <span style={styles.menuIcon}>📋</span>
+            Attendance
+          </Link>
 
-            <label>
+          <Link
+            to="/monitoring"
+            style={styles.menuItem}
+          >
+            <span style={styles.menuIcon}>🎥</span>
+            Monitoring
+          </Link>
+
+          <Link
+            to="/analytics"
+            style={styles.menuItem}
+          >
+            <span style={styles.menuIcon}>📈</span>
+            Analytics
+          </Link>
+
+          <Link
+            to="/reports"
+            style={styles.menuItem}
+          >
+            <span style={styles.menuIcon}>🤖</span>
+            AI Reports
+          </Link>
+
+        </nav>
+
+        {/* AI BOX */}
+        <div style={styles.sidebarBottom}>
+
+          <div style={styles.aiBox}>
+
+            <div style={styles.aiIcon}>
+              ✨
+            </div>
+
+            <div>
+              <strong>
+                AI Monitoring
+              </strong>
+
+              <p style={styles.aiText}>
+                Face recognition attendance
+              </p>
+            </div>
+
+          </div>
+
+        </div>
+
+      </aside>
+
+      {/* ================= MAIN ================= */}
+      <main style={styles.main}>
+
+        {/* HEADER */}
+        <header style={styles.header}>
+
+          <div>
+
+            <h1 style={styles.heading}>
+              Smart Attendance
+            </h1>
+
+            <p style={styles.subtitle}>
+              Face-recognition based classroom attendance
+            </p>
+
+          </div>
+
+          <Link
+            to="/monitoring"
+            style={styles.monitorButton}
+          >
+            🎥 Open Monitoring
+          </Link>
+
+        </header>
+
+        {/* ================= DATE + SEARCH ================= */}
+        <section style={styles.controlPanel}>
+
+          <div>
+
+            <label style={styles.label}>
               Select Date
             </label>
 
             <input
               type="date"
-              value={date}
+              value={selectedDate}
               onChange={(e) =>
-                setDate(e.target.value)
+                setSelectedDate(e.target.value)
               }
+              style={styles.dateInput}
             />
 
           </div>
 
+          <div style={styles.searchBox}>
 
-          <div className="form-group">
-
-            <label>
+            <label style={styles.label}>
               Search Student
             </label>
 
             <input
               type="text"
-              placeholder="Search by name or ID..."
+              placeholder="Search by name, roll number..."
               value={search}
               onChange={(e) =>
                 setSearch(e.target.value)
               }
+              style={styles.searchInput}
             />
 
           </div>
 
-        </div>
+        </section>
 
-      </div>
+        {/* ================= STAT CARDS ================= */}
+        <section style={styles.cards}>
 
+          <div style={styles.card}>
 
-      {/* Statistics */}
-      <div className="attendance-stats">
+            <div style={styles.cardIcon}>
+              👥
+            </div>
 
-        {/* Total */}
-        <div className="attendance-stat-card">
+            <div>
+              <p style={styles.cardLabel}>
+                TOTAL STUDENTS
+              </p>
 
-          <div className="attendance-stat-icon">
-            👥
-          </div>
-
-          <div>
-
-            <span>
-              Total Students
-            </span>
-
-            <h2>
-              {totalStudents}
-            </h2>
+              <h2 style={styles.cardNumber}>
+                {students.length}
+              </h2>
+            </div>
 
           </div>
 
-        </div>
+          <div style={styles.card}>
 
+            <div
+              style={{
+                ...styles.cardIcon,
+                backgroundColor: "#dcfce7",
+              }}
+            >
+              ✅
+            </div>
 
-        {/* Present */}
-        <div className="attendance-stat-card">
+            <div>
+              <p style={styles.cardLabel}>
+                PRESENT
+              </p>
 
-          <div className="attendance-stat-icon">
-            ✓
-          </div>
-
-          <div>
-
-            <span>
-              Present
-            </span>
-
-            <h2 className="status-good">
-              {presentStudents}
-            </h2>
-
-          </div>
-
-        </div>
-
-
-        {/* Absent */}
-        <div className="attendance-stat-card">
-
-          <div className="attendance-stat-icon">
-            ✕
-          </div>
-
-          <div>
-
-            <span>
-              Absent
-            </span>
-
-            <h2 className="status-danger">
-              {absentStudents}
-            </h2>
+              <h2 style={styles.cardNumber}>
+                {presentCount}
+              </h2>
+            </div>
 
           </div>
 
-        </div>
+          <div style={styles.card}>
 
+            <div
+              style={{
+                ...styles.cardIcon,
+                backgroundColor: "#fee2e2",
+              }}
+            >
+              ❌
+            </div>
 
-        {/* Percentage */}
-        <div className="attendance-stat-card">
+            <div>
+              <p style={styles.cardLabel}>
+                ABSENT
+              </p>
 
-          <div className="attendance-stat-icon">
-            📊
-          </div>
-
-          <div>
-
-            <span>
-              Attendance
-            </span>
-
-            <h2>
-              {attendancePercentage}%
-            </h2>
-
-          </div>
-
-        </div>
-
-      </div>
-
-
-      {/* Attendance Table */}
-      <div className="camera-card">
-
-        <div className="card-title">
-
-          <div>
-
-            <h2>
-              Attendance Records
-            </h2>
-
-            <p>
-              Date: {date}
-            </p>
+              <h2 style={styles.cardNumber}>
+                {absentCount}
+              </h2>
+            </div>
 
           </div>
 
-          <span className="camera-live">
-            ● LIVE
-          </span>
+          <div style={styles.card}>
 
-        </div>
+            <div
+              style={{
+                ...styles.cardIcon,
+                backgroundColor: "#dbeafe",
+              }}
+            >
+              📊
+            </div>
 
+            <div>
+              <p style={styles.cardLabel}>
+                ATTENDANCE
+              </p>
 
-        {students.length === 0 ? (
+              <h2 style={styles.cardNumber}>
+                {attendancePercentage}%
+              </h2>
+            </div>
 
-          <div className="no-students">
+          </div>
 
-            <p>
-              No students registered
-            </p>
+        </section>
 
-            <span>
-              Register students first from
-              Student Registration.
+        {/* ================= ATTENDANCE TABLE ================= */}
+        <section style={styles.panel}>
+
+          <div style={styles.panelHeader}>
+
+            <div>
+
+              <h2 style={styles.panelTitle}>
+                Student Attendance
+              </h2>
+
+              <p style={styles.panelSubtitle}>
+                Attendance for {selectedDate}
+              </p>
+
+            </div>
+
+            <span style={styles.liveBadge}>
+              ● LIVE DATA
             </span>
 
           </div>
 
-        ) : (
+          {students.length === 0 ? (
 
-          <div className="attendance-table-container">
+            <div style={styles.emptyState}>
 
-            <table className="attendance-table">
+              <div style={styles.emptyIcon}>
+                👥
+              </div>
 
-              <thead>
+              <h3>
+                No students registered
+              </h3>
 
-                <tr>
+              <p>
+                Register students first to view
+                attendance.
+              </p>
 
-                  <th>
-                    Student ID
-                  </th>
+              <Link
+                to="/students"
+                style={styles.primaryButton}
+              >
+                Register Student
+              </Link>
 
-                  <th>
-                    Student Name
-                  </th>
+            </div>
 
-                  <th>
-                    Status
-                  </th>
+          ) : filteredStudents.length === 0 ? (
 
-                  <th>
-                    Detection
-                  </th>
+            <div style={styles.emptyState}>
 
-                </tr>
+              <div style={styles.emptyIcon}>
+                🔍
+              </div>
 
-              </thead>
+              <h3>
+                No student found
+              </h3>
 
+              <p>
+                Try another name or roll number.
+              </p>
 
-              <tbody>
+            </div>
 
-                {filteredStudents.map(
-                  (student) => (
+          ) : (
 
-                    <tr key={student.id}>
+            <div style={styles.tableContainer}>
 
-                      <td>
-                        {student.id}
-                      </td>
+              <table style={styles.table}>
 
-                      <td>
-                        <strong>
-                          {student.name}
-                        </strong>
-                      </td>
+                <thead>
 
-                      <td>
+                  <tr>
 
-                        <span
-                          className={
-                            student.status ===
-                            "Present"
-                              ? "attendance-present"
-                              : "attendance-absent"
+                    <th style={styles.th}>
+                      Student
+                    </th>
+
+                    <th style={styles.th}>
+                      Roll Number
+                    </th>
+
+                    <th style={styles.th}>
+                      Department
+                    </th>
+
+                    <th style={styles.th}>
+                      Status
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody>
+
+                  {filteredStudents.map(
+                    (student, index) => {
+
+                      const status =
+                        todayAttendance[
+                          student.name
+                        ] || "Absent";
+
+                      return (
+                        <tr
+                          key={
+                            student.id || index
                           }
                         >
-                          {student.status ===
-                          "Present"
-                            ? "✓ Present"
-                            : "✕ Absent"}
-                        </span>
 
-                      </td>
+                          {/* STUDENT */}
+                          <td style={styles.td}>
 
-                      <td>
+                            <div
+                              style={
+                                styles.studentInfo
+                              }
+                            >
 
-                        {student.status ===
-                        "Present" ? (
-                          <span className="status-good">
-                            AI Recognized
-                          </span>
-                        ) : (
-                          <span className="status-warning">
-                            Not Detected
-                          </span>
-                        )}
+                              <div
+                                style={
+                                  styles.studentAvatar
+                                }
+                              >
+                                {student.name
+                                  ? student.name
+                                      .charAt(0)
+                                      .toUpperCase()
+                                  : "S"}
+                              </div>
 
-                      </td>
+                              <div>
 
-                    </tr>
+                                <strong>
+                                  {student.name ||
+                                    "Student"}
+                                </strong>
 
-                  )
-                )}
+                                <p
+                                  style={
+                                    styles.email
+                                  }
+                                >
+                                  {student.email ||
+                                    "No email"}
+                                </p>
 
-              </tbody>
+                              </div>
 
-            </table>
+                            </div>
 
+                          </td>
+
+                          {/* ROLL NUMBER */}
+                          <td style={styles.td}>
+                            {student.rollNo || "—"}
+                          </td>
+
+                          {/* DEPARTMENT */}
+                          <td style={styles.td}>
+                            {student.department ||
+                              "—"}
+                          </td>
+
+                          {/* STATUS */}
+                          <td style={styles.td}>
+
+                            {status ===
+                            "Present" ? (
+
+                              <span
+                                style={
+                                  styles.presentBadge
+                                }
+                              >
+                                ✓ Present
+                              </span>
+
+                            ) : (
+
+                              <span
+                                style={
+                                  styles.absentBadge
+                                }
+                              >
+                                ✕ Absent
+                              </span>
+
+                            )}
+
+                          </td>
+
+                        </tr>
+                      );
+                    }
+                  )}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          )}
+
+        </section>
+
+        {/* ================= INFO ================= */}
+        <section style={styles.infoBox}>
+
+          <div style={styles.infoIcon}>
+            🤖
           </div>
 
-        )}
+          <div>
 
-      </div>
-
-
-      {/* Information */}
-      <div className="ai-monitor-status">
-
-        <h2>
-          How AI Attendance Works
-        </h2>
-
-        <div className="attendance-flow">
-
-          <div className="attendance-flow-item">
-
-            <span>
-              📹
-            </span>
-
-            <h3>
-              Camera
+            <h3 style={styles.infoTitle}>
+              AI Attendance System
             </h3>
 
-            <p>
-              Classroom camera captures
-              student faces.
+            <p style={styles.infoText}>
+              Attendance is automatically updated when
+              registered students are recognized by the
+              camera during Live Monitoring.
             </p>
 
           </div>
 
+          <Link
+            to="/monitoring"
+            style={styles.infoButton}
+          >
+            Start Monitoring →
+          </Link>
 
-          <div className="attendance-flow-item">
+        </section>
 
-            <span>
-              🤖
-            </span>
-
-            <h3>
-              AI Recognition
-            </h3>
-
-            <p>
-              Face recognition identifies
-              registered students.
-            </p>
-
-          </div>
-
-
-          <div className="attendance-flow-item">
-
-            <span>
-              📋
-            </span>
-
-            <h3>
-              Attendance
-            </h3>
-
-            <p>
-              Recognized students are
-              automatically marked present.
-            </p>
-
-          </div>
-
-        </div>
-
-      </div>
+      </main>
 
     </div>
   );
 }
+
+
+/* =========================================================
+   STYLES
+========================================================= */
+
+const styles = {
+
+  app: {
+    minHeight: "100vh",
+    display: "flex",
+    backgroundColor: "#f8fafc",
+    fontFamily:
+      "Inter, Arial, Helvetica, sans-serif",
+    color: "#0f172a",
+  },
+
+  /* SIDEBAR */
+
+  sidebar: {
+    width: "250px",
+    minHeight: "100vh",
+    background:
+      "linear-gradient(180deg, #0f172a 0%, #172554 100%)",
+    color: "white",
+    padding: "24px 16px",
+    boxSizing: "border-box",
+    position: "fixed",
+    left: 0,
+    top: 0,
+    bottom: 0,
+  },
+
+  logoSection: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "5px 8px 28px",
+    borderBottom:
+      "1px solid rgba(255,255,255,0.1)",
+  },
+
+  logoIcon: {
+    width: "42px",
+    height: "42px",
+    borderRadius: "12px",
+    background:
+      "linear-gradient(135deg,#2563eb,#7c3aed)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "22px",
+  },
+
+  logoTitle: {
+    margin: 0,
+    fontSize: "16px",
+    letterSpacing: "1px",
+  },
+
+  logoSubtitle: {
+    margin: "3px 0 0",
+    fontSize: "10px",
+    color: "#94a3b8",
+  },
+
+  menuTitle: {
+    fontSize: "10px",
+    color: "#64748b",
+    letterSpacing: "1.5px",
+    margin: "28px 10px 10px",
+  },
+
+  menuItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "13px",
+    padding: "13px 14px",
+    marginBottom: "6px",
+    borderRadius: "10px",
+    color: "#cbd5e1",
+    textDecoration: "none",
+    fontSize: "14px",
+    fontWeight: "500",
+  },
+
+  activeMenuItem: {
+    background:
+      "linear-gradient(90deg,#2563eb,#4f46e5)",
+    color: "#ffffff",
+    boxShadow:
+      "0 5px 15px rgba(37,99,235,0.25)",
+  },
+
+  menuIcon: {
+    width: "22px",
+    textAlign: "center",
+    fontSize: "18px",
+  },
+
+  sidebarBottom: {
+    position: "absolute",
+    bottom: "20px",
+    left: "16px",
+    right: "16px",
+  },
+
+  aiBox: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    padding: "12px",
+    borderRadius: "12px",
+    background:
+      "rgba(255,255,255,0.06)",
+  },
+
+  aiIcon: {
+    fontSize: "20px",
+  },
+
+  aiText: {
+    margin: "3px 0 0",
+    color: "#94a3b8",
+    fontSize: "10px",
+  },
+
+  /* MAIN */
+
+  main: {
+    marginLeft: "250px",
+    width: "calc(100% - 250px)",
+    padding: "30px 35px",
+    boxSizing: "border-box",
+  },
+
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "25px",
+  },
+
+  heading: {
+    margin: 0,
+    fontSize: "30px",
+    fontWeight: "700",
+  },
+
+  subtitle: {
+    margin: "6px 0 0",
+    color: "#64748b",
+    fontSize: "14px",
+  },
+
+  monitorButton: {
+    textDecoration: "none",
+    backgroundColor: "#2563eb",
+    color: "#ffffff",
+    padding: "11px 17px",
+    borderRadius: "9px",
+    fontSize: "13px",
+    fontWeight: "600",
+  },
+
+  /* CONTROLS */
+
+  controlPanel: {
+    display: "flex",
+    gap: "20px",
+    alignItems: "end",
+    backgroundColor: "#ffffff",
+    border: "1px solid #e2e8f0",
+    borderRadius: "15px",
+    padding: "18px 20px",
+    marginBottom: "22px",
+  },
+
+  label: {
+    display: "block",
+    fontSize: "11px",
+    fontWeight: "600",
+    color: "#64748b",
+    marginBottom: "6px",
+  },
+
+  dateInput: {
+    padding: "10px 12px",
+    border: "1px solid #cbd5e1",
+    borderRadius: "8px",
+    fontSize: "13px",
+    outline: "none",
+  },
+
+  searchBox: {
+    flex: 1,
+  },
+
+  searchInput: {
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "10px 12px",
+    border: "1px solid #cbd5e1",
+    borderRadius: "8px",
+    fontSize: "13px",
+    outline: "none",
+  },
+
+  /* CARDS */
+
+  cards: {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(4, minmax(0, 1fr))",
+    gap: "18px",
+    marginBottom: "22px",
+  },
+
+  card: {
+    backgroundColor: "#ffffff",
+    border: "1px solid #e2e8f0",
+    borderRadius: "15px",
+    padding: "18px",
+    display: "flex",
+    alignItems: "center",
+    gap: "15px",
+    boxShadow:
+      "0 4px 15px rgba(15,23,42,0.04)",
+  },
+
+  cardIcon: {
+    width: "45px",
+    height: "45px",
+    borderRadius: "11px",
+    backgroundColor: "#dbeafe",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "20px",
+  },
+
+  cardLabel: {
+    margin: 0,
+    color: "#94a3b8",
+    fontSize: "10px",
+    fontWeight: "700",
+    letterSpacing: "0.7px",
+  },
+
+  cardNumber: {
+    margin: "5px 0 0",
+    fontSize: "25px",
+  },
+
+  /* PANEL */
+
+  panel: {
+    backgroundColor: "#ffffff",
+    border: "1px solid #e2e8f0",
+    borderRadius: "15px",
+    padding: "22px",
+    marginBottom: "22px",
+    boxShadow:
+      "0 4px 15px rgba(15,23,42,0.04)",
+  },
+
+  panelHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: "20px",
+  },
+
+  panelTitle: {
+    margin: 0,
+    fontSize: "18px",
+  },
+
+  panelSubtitle: {
+    margin: "4px 0 0",
+    color: "#94a3b8",
+    fontSize: "11px",
+  },
+
+  liveBadge: {
+    backgroundColor: "#dcfce7",
+    color: "#15803d",
+    padding: "7px 10px",
+    borderRadius: "20px",
+    fontSize: "10px",
+    fontWeight: "700",
+  },
+
+  /* TABLE */
+
+  tableContainer: {
+    overflowX: "auto",
+  },
+
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+  },
+
+  th: {
+    textAlign: "left",
+    padding: "12px",
+    borderBottom:
+      "1px solid #e2e8f0",
+    color: "#64748b",
+    fontSize: "11px",
+    textTransform: "uppercase",
+  },
+
+  td: {
+    padding: "14px 12px",
+    borderBottom:
+      "1px solid #f1f5f9",
+    fontSize: "13px",
+  },
+
+  studentInfo: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  },
+
+  studentAvatar: {
+    width: "38px",
+    height: "38px",
+    borderRadius: "50%",
+    backgroundColor: "#dbeafe",
+    color: "#2563eb",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "700",
+  },
+
+  email: {
+    margin: "3px 0 0",
+    color: "#94a3b8",
+    fontSize: "10px",
+  },
+
+  presentBadge: {
+    backgroundColor: "#dcfce7",
+    color: "#15803d",
+    padding: "6px 10px",
+    borderRadius: "20px",
+    fontSize: "11px",
+    fontWeight: "600",
+  },
+
+  absentBadge: {
+    backgroundColor: "#fee2e2",
+    color: "#dc2626",
+    padding: "6px 10px",
+    borderRadius: "20px",
+    fontSize: "11px",
+    fontWeight: "600",
+  },
+
+  /* EMPTY */
+
+  emptyState: {
+    textAlign: "center",
+    padding: "45px",
+    color: "#64748b",
+  },
+
+  emptyIcon: {
+    fontSize: "45px",
+    marginBottom: "10px",
+  },
+
+  primaryButton: {
+    display: "inline-block",
+    marginTop: "10px",
+    textDecoration: "none",
+    backgroundColor: "#2563eb",
+    color: "#ffffff",
+    padding: "10px 16px",
+    borderRadius: "8px",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
+
+  /* INFO */
+
+  infoBox: {
+    background:
+      "linear-gradient(135deg,#eff6ff,#eef2ff)",
+    border: "1px solid #dbeafe",
+    borderRadius: "15px",
+    padding: "18px 20px",
+    display: "flex",
+    alignItems: "center",
+    gap: "15px",
+  },
+
+  infoIcon: {
+    fontSize: "32px",
+  },
+
+  infoTitle: {
+    margin: 0,
+    fontSize: "15px",
+  },
+
+  infoText: {
+    margin: "4px 0 0",
+    color: "#64748b",
+    fontSize: "11px",
+    lineHeight: "1.5",
+  },
+
+  infoButton: {
+    marginLeft: "auto",
+    textDecoration: "none",
+    backgroundColor: "#2563eb",
+    color: "#ffffff",
+    padding: "9px 13px",
+    borderRadius: "8px",
+    fontSize: "11px",
+    fontWeight: "600",
+  },
+};
 
 export default Attendance;
