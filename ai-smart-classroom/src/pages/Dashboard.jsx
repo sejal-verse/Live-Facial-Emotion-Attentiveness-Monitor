@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 function Dashboard() {
   const [liveData, setLiveData] = useState(null);
   const [attendance, setAttendance] = useState({});
+  const [registeredStudents, setRegisteredStudents] = useState([]);
 
   // ==========================================
   // LOAD LIVE DATA
@@ -30,8 +31,73 @@ function Dashboard() {
       try {
         setAttendance(JSON.parse(savedAttendance));
       } catch (error) {
+        console.error("Error loading attendance:", error);
+      }
+    }
+
+    // LOAD REGISTERED STUDENTS
+    const savedStudents = localStorage.getItem(
+      "registeredStudents"
+    );
+
+    if (savedStudents) {
+      try {
+        setRegisteredStudents(JSON.parse(savedStudents));
+      } catch (error) {
         console.error(
-          "Error loading attendance:",
+          "Error loading registered students:",
+          error
+        );
+        setRegisteredStudents([]);
+      }
+    } else {
+      setRegisteredStudents([]);
+    }
+  };
+
+  // ==========================================
+  // DELETE REGISTERED STUDENT
+  // ==========================================
+
+  const deleteStudent = (studentId) => {
+    const student = registeredStudents.find(
+      (s) => s.id === studentId
+    );
+
+    if (!student) return;
+
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete ${student.name}?`
+    );
+
+    if (!confirmDelete) return;
+
+    const updatedStudents = registeredStudents.filter(
+      (s) => s.id !== studentId
+    );
+
+    localStorage.setItem(
+      "registeredStudents",
+      JSON.stringify(updatedStudents)
+    );
+
+    setRegisteredStudents(updatedStudents);
+
+    // Remove deleted student's login session
+    const savedLoggedInStudent =
+      localStorage.getItem("loggedInStudent");
+
+    if (savedLoggedInStudent) {
+      try {
+        const loggedInStudent =
+          JSON.parse(savedLoggedInStudent);
+
+        if (loggedInStudent?.id === studentId) {
+          localStorage.removeItem("loggedInStudent");
+        }
+      } catch (error) {
+        console.error(
+          "Error checking logged in student:",
           error
         );
       }
@@ -439,7 +505,11 @@ function Dashboard() {
                       students.map(
                         (student, index) => (
 
-                          <tr key={student.id || index}>
+                          <tr
+                            key={
+                              student.id || index
+                            }
+                          >
 
                             <td style={styles.td}>
 
@@ -567,6 +637,142 @@ function Dashboard() {
             </div>
 
           </div>
+
+        </section>
+
+        {/* ================================== */}
+        {/* REGISTERED STUDENTS */}
+        {/* ================================== */}
+
+        <section style={styles.largeCard}>
+
+          <div style={styles.cardHeader}>
+
+            <div>
+              <h2 style={styles.cardTitle}>
+                👨‍🎓 Registered Students
+              </h2>
+
+              <p style={styles.cardSubtitle}>
+                Manage students registered in
+                AI Smart Classroom
+              </p>
+            </div>
+
+            <div style={styles.studentCount}>
+              {registeredStudents.length} Students
+            </div>
+
+          </div>
+
+          {registeredStudents.length === 0 ? (
+
+            <div style={styles.noStudents}>
+              No registered students found.
+            </div>
+
+          ) : (
+
+            <div style={styles.tableWrapper}>
+
+              <table style={styles.table}>
+
+                <thead>
+                  <tr>
+
+                    <th style={styles.th}>
+                      Student
+                    </th>
+
+                    <th style={styles.th}>
+                      Roll No
+                    </th>
+
+                    <th style={styles.th}>
+                      Email
+                    </th>
+
+                    <th style={styles.th}>
+                      Department
+                    </th>
+
+                    <th style={styles.th}>
+                      Status
+                    </th>
+
+                    <th style={styles.th}>
+                      Action
+                    </th>
+
+                  </tr>
+                </thead>
+
+                <tbody>
+
+                  {registeredStudents.map(
+                    (student) => (
+
+                      <tr key={student.id}>
+
+                        <td style={styles.td}>
+                          <strong>
+                            {student.name}
+                          </strong>
+                        </td>
+
+                        <td style={styles.td}>
+                          {student.rollNo}
+                        </td>
+
+                        <td style={styles.td}>
+                          {student.email}
+                        </td>
+
+                        <td style={styles.td}>
+                          {student.department}
+                        </td>
+
+                        <td style={styles.td}>
+
+                          <span
+                            style={
+                              styles.registeredBadge
+                            }
+                          >
+                            ✓ Registered
+                          </span>
+
+                        </td>
+
+                        <td style={styles.td}>
+
+                          <button
+                            onClick={() =>
+                              deleteStudent(
+                                student.id
+                              )
+                            }
+                            style={
+                              styles.deleteButton
+                            }
+                          >
+                            🗑️ Delete
+                          </button>
+
+                        </td>
+
+                      </tr>
+
+                    )
+                  )}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          )}
 
         </section>
 
@@ -952,6 +1158,47 @@ const styles = {
   attendanceDate: {
     fontSize: "11px",
     color: "#64748b",
+  },
+
+  // ==========================================
+  // REGISTERED STUDENTS STYLES
+  // ==========================================
+
+  studentCount: {
+    background: "#eff6ff",
+    color: "#2563eb",
+    padding: "7px 12px",
+    borderRadius: "20px",
+    fontSize: "11px",
+    fontWeight: "700",
+  },
+
+  registeredBadge: {
+    display: "inline-block",
+    background: "#dcfce7",
+    color: "#15803d",
+    padding: "5px 9px",
+    borderRadius: "20px",
+    fontSize: "10px",
+    fontWeight: "700",
+  },
+
+  deleteButton: {
+    background: "#fee2e2",
+    color: "#dc2626",
+    border: "none",
+    padding: "7px 11px",
+    borderRadius: "7px",
+    fontSize: "11px",
+    fontWeight: "700",
+    cursor: "pointer",
+  },
+
+  noStudents: {
+    textAlign: "center",
+    padding: "30px",
+    color: "#94a3b8",
+    fontSize: "12px",
   },
 
   footer: {

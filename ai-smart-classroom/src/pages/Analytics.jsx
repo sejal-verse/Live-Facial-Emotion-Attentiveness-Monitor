@@ -3,25 +3,49 @@ import { Link } from "react-router-dom";
 
 function Analytics() {
   const [liveData, setLiveData] = useState(null);
+  const [attendance, setAttendance] = useState({});
+  const [students, setStudents] = useState([]);
 
   // ==========================================
-  // LOAD LIVE DATA
+  // LOAD ALL ANALYTICS DATA
   // ==========================================
 
-  const loadLiveData = () => {
-    const savedData = localStorage.getItem(
-      "liveMonitoringData"
-    );
+  const loadData = () => {
+    try {
+      const savedLiveData = localStorage.getItem(
+        "liveMonitoringData"
+      );
 
-    if (savedData) {
-      try {
-        setLiveData(JSON.parse(savedData));
-      } catch (error) {
-        console.error(
-          "Error loading analytics data:",
-          error
-        );
+      const savedAttendance = localStorage.getItem(
+        "classAttendance"
+      );
+
+      const savedStudents = localStorage.getItem(
+        "registeredStudents"
+      );
+
+      if (savedLiveData) {
+        setLiveData(JSON.parse(savedLiveData));
+      } else {
+        setLiveData(null);
       }
+
+      if (savedAttendance) {
+        setAttendance(JSON.parse(savedAttendance));
+      } else {
+        setAttendance({});
+      }
+
+      if (savedStudents) {
+        setStudents(JSON.parse(savedStudents));
+      } else {
+        setStudents([]);
+      }
+    } catch (error) {
+      console.error(
+        "Error loading analytics data:",
+        error
+      );
     }
   };
 
@@ -30,82 +54,89 @@ function Analytics() {
   // ==========================================
 
   useEffect(() => {
-    loadLiveData();
+    loadData();
 
     const interval = setInterval(() => {
-      loadLiveData();
+      loadData();
     }, 1000);
 
     return () => clearInterval(interval);
   }, []);
 
   // ==========================================
-  // LIVE DATA
+  // LIVE MONITORING DATA
   // ==========================================
 
-  const students =
+  const liveStudents =
     liveData?.students || [];
 
   const recognizedStudents =
-    students.filter(
+    liveStudents.filter(
       (student) => student.recognized
     );
 
-  const averageAttention =
-    liveData?.averageAttention ?? 0;
-
-  const distractedCount =
-    liveData?.distractedCount ??
-    liveData?.distracted ??
-    0;
+  const studentPerformance =
+    liveData?.studentPerformance || [];
 
   const monitoringActive =
     liveData?.monitoringActive ?? false;
+
+  const averageAttention =
+    Number(liveData?.averageAttention) || 0;
+
+  const distractedCount =
+    Number(
+      liveData?.distractedCount ??
+        liveData?.distracted ??
+        0
+    );
 
   // ==========================================
   // EMOTION ANALYSIS
   // ==========================================
 
-  const emotionCounts = {};
+  const emotionCounts = {
+    happy: 0,
+    neutral: 0,
+    sad: 0,
+    angry: 0,
+    fearful: 0,
+    disgusted: 0,
+    surprised: 0,
+  };
 
   recognizedStudents.forEach((student) => {
-    const emotion =
-      student.emotion || "Neutral";
+    const emotion = (
+      student.emotion || "neutral"
+    ).toLowerCase();
 
-    emotionCounts[emotion] =
-      (emotionCounts[emotion] || 0) + 1;
+    if (
+      Object.prototype.hasOwnProperty.call(
+        emotionCounts,
+        emotion
+      )
+    ) {
+      emotionCounts[emotion]++;
+    }
   });
 
   const totalRecognized =
     recognizedStudents.length;
 
-  const happyCount =
-    emotionCounts.happy || 0;
-
-  const neutralCount =
-    emotionCounts.neutral || 0;
-
-  const sadCount =
-    emotionCounts.sad || 0;
-
-  const angryCount =
-    emotionCounts.angry || 0;
-
-  const fearfulCount =
-    emotionCounts.fearful || 0;
-
-  const disgustedCount =
-    emotionCounts.disgusted || 0;
-
-  const surprisedCount =
-    emotionCounts.surprised || 0;
-
-  const percentage = (count) =>
+  const emotionPercentage = (count) =>
     totalRecognized > 0
       ? Math.round(
           (count / totalRecognized) * 100
         )
       : 0;
+
+  // ==========================================
+  // MAIN EMOTION
+  // ==========================================
+
+  const mainEmotion =
+    liveData?.mainEmotion ||
+    getMainEmotion(emotionCounts);
 
   // ==========================================
   // ATTENTION LEVEL
@@ -120,7 +151,7 @@ function Analytics() {
   }
 
   // ==========================================
-  // DISTRACTION PERCENTAGE
+  // DISTRACTION
   // ==========================================
 
   const distractionPercentage =
@@ -133,11 +164,73 @@ function Analytics() {
       : 0;
 
   // ==========================================
-  // MAIN EMOTION
+  // ATTENDANCE ANALYTICS
   // ==========================================
 
-  const mainEmotion =
-    liveData?.mainEmotion || "Waiting";
+  const attendanceDates =
+    Object.keys(attendance);
+
+  const totalAttendanceDays =
+    attendanceDates.length;
+
+  const getPresentDays = (student) => {
+    return attendanceDates.filter(
+      (date) =>
+        attendance[date]?.[student.name] ===
+        "Present"
+    ).length;
+  };
+
+  const getAttendancePercentage = (student) => {
+    if (totalAttendanceDays === 0) {
+      return 0;
+    }
+
+    return Math.round(
+      (getPresentDays(student) /
+        totalAttendanceDays) *
+        100
+    );
+  };
+
+  const overallAttendance =
+    students.length > 0 &&
+    totalAttendanceDays > 0
+      ? Math.round(
+          students.reduce(
+            (total, student) =>
+              total +
+              getAttendancePercentage(student),
+            0
+          ) / students.length
+        )
+      : 0;
+
+  // ==========================================
+  // ATTENDANCE CATEGORIES
+  // ==========================================
+
+  const goodAttendance = students.filter(
+    (student) =>
+      getAttendancePercentage(student) >= 75
+  ).length;
+
+  const averageAttendance = students.filter(
+    (student) => {
+      const percentage =
+        getAttendancePercentage(student);
+
+      return (
+        percentage >= 50 &&
+        percentage < 75
+      );
+    }
+  ).length;
+
+  const poorAttendance = students.filter(
+    (student) =>
+      getAttendancePercentage(student) < 50
+  ).length;
 
   // ==========================================
   // RENDER
@@ -159,6 +252,7 @@ function Analytics() {
           </div>
 
           <div>
+
             <div style={styles.logoTitle}>
               AI CLASSROOM
             </div>
@@ -166,6 +260,7 @@ function Analytics() {
             <div style={styles.logoSubtitle}>
               Teacher Portal
             </div>
+
           </div>
 
         </div>
@@ -181,6 +276,13 @@ function Analytics() {
             style={styles.navItem}
           >
             🏠 Dashboard
+          </Link>
+
+          <Link
+            to="/students"
+            style={styles.navItem}
+          >
+            👥 Students
           </Link>
 
           <Link
@@ -225,6 +327,7 @@ function Analytics() {
       <main style={styles.main}>
 
         {/* HEADER */}
+
         <header style={styles.header}>
 
           <div>
@@ -240,21 +343,32 @@ function Analytics() {
 
           </div>
 
-          <div style={styles.statusBox}>
+          <div style={styles.headerRight}>
 
-            <span
-              style={{
-                ...styles.statusDot,
-                backgroundColor:
-                  monitoringActive
-                    ? "#22c55e"
-                    : "#94a3b8",
-              }}
-            />
+            <div style={styles.statusBox}>
 
-            {monitoringActive
-              ? "Live Analysis"
-              : "Analysis Inactive"}
+              <span
+                style={{
+                  ...styles.statusDot,
+                  backgroundColor:
+                    monitoringActive
+                      ? "#22c55e"
+                      : "#94a3b8",
+                }}
+              />
+
+              {monitoringActive
+                ? "Live Analysis"
+                : "Analysis Inactive"}
+
+            </div>
+
+            <Link
+              to="/monitoring"
+              style={styles.monitorButton}
+            >
+              🎥 Monitoring
+            </Link>
 
           </div>
 
@@ -266,7 +380,43 @@ function Analytics() {
 
         <section style={styles.statsGrid}>
 
+          {/* ATTENDANCE */}
+
+          <div style={styles.card}>
+
+            <div
+              style={{
+                ...styles.icon,
+                background: "#dbeafe",
+              }}
+            >
+              📋
+            </div>
+
+            <div>
+
+              <p style={styles.label}>
+                Overall Attendance
+              </p>
+
+              <h2 style={styles.value}>
+                {overallAttendance}%
+              </h2>
+
+              <p style={styles.small}>
+                {totalAttendanceDays} day
+                {totalAttendanceDays !== 1
+                  ? "s"
+                  : ""}{" "}
+                tracked
+              </p>
+
+            </div>
+
+          </div>
+
           {/* ATTENTION */}
+
           <div style={styles.card}>
 
             <div
@@ -285,7 +435,7 @@ function Analytics() {
               </p>
 
               <h2 style={styles.value}>
-                {averageAttention}%
+                {Math.round(averageAttention)}%
               </h2>
 
               <p style={styles.small}>
@@ -297,12 +447,13 @@ function Analytics() {
           </div>
 
           {/* STUDENTS */}
+
           <div style={styles.card}>
 
             <div
               style={{
                 ...styles.icon,
-                background: "#dbeafe",
+                background: "#ede9fe",
               }}
             >
               👨‍🎓
@@ -319,37 +470,7 @@ function Analytics() {
               </h2>
 
               <p style={styles.small}>
-                Recognized students
-              </p>
-
-            </div>
-
-          </div>
-
-          {/* MAIN EMOTION */}
-          <div style={styles.card}>
-
-            <div
-              style={{
-                ...styles.icon,
-                background: "#fef3c7",
-              }}
-            >
-              😊
-            </div>
-
-            <div>
-
-              <p style={styles.label}>
-                Main Emotion
-              </p>
-
-              <h2 style={styles.emotionValue}>
-                {mainEmotion}
-              </h2>
-
-              <p style={styles.small}>
-                Most detected emotion
+                {students.length} registered
               </p>
 
             </div>
@@ -357,6 +478,7 @@ function Analytics() {
           </div>
 
           {/* DISTRACTION */}
+
           <div style={styles.card}>
 
             <div
@@ -389,6 +511,86 @@ function Analytics() {
         </section>
 
         {/* ================================== */}
+        {/* CLASSROOM OVERVIEW */}
+        {/* ================================== */}
+
+        <section style={styles.cardLarge}>
+
+          <div style={styles.cardHeader}>
+
+            <div>
+
+              <h2 style={styles.cardTitle}>
+                📊 Classroom Overview
+              </h2>
+
+              <p style={styles.cardSubtitle}>
+                Current AI-generated classroom
+                performance
+              </p>
+
+            </div>
+
+            <span style={styles.liveBadge}>
+              {monitoringActive
+                ? "● LIVE"
+                : "○ OFFLINE"}
+            </span>
+
+          </div>
+
+          <div style={styles.overviewGrid}>
+
+            <MetricBox
+              icon="👀"
+              title="Attention"
+              value={`${Math.round(
+                averageAttention
+              )}%`}
+              description={attentionLevel}
+              percentage={averageAttention}
+              type="attention"
+            />
+
+            <MetricBox
+              icon="⚠️"
+              title="Distraction"
+              value={`${distractionPercentage}%`}
+              description={
+                distractionPercentage >= 40
+                  ? "High"
+                  : distractionPercentage >= 20
+                  ? "Medium"
+                  : "Low"
+              }
+              percentage={distractionPercentage}
+              type="distraction"
+            />
+
+            <MetricBox
+              icon="😊"
+              title="Main Emotion"
+              value={mainEmotion}
+              description="Most detected emotion"
+              percentage={
+                totalRecognized > 0
+                  ? emotionPercentage(
+                      emotionCounts[
+                        String(
+                          mainEmotion
+                        ).toLowerCase()
+                      ] || 0
+                    )
+                  : 0
+              }
+              type="emotion"
+            />
+
+          </div>
+
+        </section>
+
+        {/* ================================== */}
         {/* ATTENTION ANALYSIS */}
         {/* ================================== */}
 
@@ -415,7 +617,7 @@ function Analytics() {
           </div>
 
           <div style={styles.bigScore}>
-            {averageAttention}%
+            {Math.round(averageAttention)}%
           </div>
 
           <div style={styles.progressBackground}>
@@ -424,7 +626,10 @@ function Analytics() {
               style={{
                 ...styles.progressBar,
                 width: `${Math.min(
-                  Number(averageAttention) || 0,
+                  Math.max(
+                    Number(averageAttention) || 0,
+                    0
+                  ),
                   100
                 )}%`,
               }}
@@ -465,7 +670,8 @@ function Analytics() {
               </h2>
 
               <p style={styles.cardSubtitle}>
-                Current detected student emotions
+                Distribution of currently detected
+                student emotions
               </p>
 
             </div>
@@ -477,43 +683,109 @@ function Analytics() {
             <EmotionBar
               emoji="😊"
               name="Happy"
-              value={percentage(happyCount)}
+              value={emotionPercentage(
+                emotionCounts.happy
+              )}
             />
 
             <EmotionBar
               emoji="😐"
               name="Neutral"
-              value={percentage(neutralCount)}
+              value={emotionPercentage(
+                emotionCounts.neutral
+              )}
             />
 
             <EmotionBar
               emoji="😢"
               name="Sad"
-              value={percentage(sadCount)}
+              value={emotionPercentage(
+                emotionCounts.sad
+              )}
             />
 
             <EmotionBar
               emoji="😠"
               name="Angry"
-              value={percentage(angryCount)}
+              value={emotionPercentage(
+                emotionCounts.angry
+              )}
             />
 
             <EmotionBar
               emoji="😨"
               name="Fearful"
-              value={percentage(fearfulCount)}
+              value={emotionPercentage(
+                emotionCounts.fearful
+              )}
             />
 
             <EmotionBar
               emoji="🤢"
               name="Disgusted"
-              value={percentage(disgustedCount)}
+              value={emotionPercentage(
+                emotionCounts.disgusted
+              )}
             />
 
             <EmotionBar
               emoji="😲"
               name="Surprised"
-              value={percentage(surprisedCount)}
+              value={emotionPercentage(
+                emotionCounts.surprised
+              )}
+            />
+
+          </div>
+
+        </section>
+
+        {/* ================================== */}
+        {/* ATTENDANCE DISTRIBUTION */}
+        {/* ================================== */}
+
+        <section style={styles.cardLarge}>
+
+          <div style={styles.cardHeader}>
+
+            <div>
+
+              <h2 style={styles.cardTitle}>
+                📋 Attendance Distribution
+              </h2>
+
+              <p style={styles.cardSubtitle}>
+                Student attendance performance
+              </p>
+
+            </div>
+
+          </div>
+
+          <div style={styles.attendanceDistribution}>
+
+            <AttendanceBox
+              icon="🟢"
+              title="Good Attendance"
+              value={goodAttendance}
+              description="75% and above"
+              styleType="good"
+            />
+
+            <AttendanceBox
+              icon="🟡"
+              title="Average"
+              value={averageAttendance}
+              description="50% - 74%"
+              styleType="average"
+            />
+
+            <AttendanceBox
+              icon="🔴"
+              title="Poor Attendance"
+              value={poorAttendance}
+              description="Below 50%"
+              styleType="poor"
             />
 
           </div>
@@ -542,7 +814,8 @@ function Analytics() {
 
           </div>
 
-          {recognizedStudents.length === 0 ? (
+          {recognizedStudents.length === 0 &&
+          studentPerformance.length === 0 ? (
 
             <div style={styles.emptyState}>
 
@@ -558,6 +831,13 @@ function Analytics() {
                 Start Live Monitoring to generate
                 classroom analytics.
               </p>
+
+              <Link
+                to="/monitoring"
+                style={styles.primaryButton}
+              >
+                Start Monitoring
+              </Link>
 
             </div>
 
@@ -587,76 +867,205 @@ function Analytics() {
                       Distraction
                     </th>
 
+                    <th style={styles.th}>
+                      Attendance
+                    </th>
+
                   </tr>
 
                 </thead>
 
                 <tbody>
 
-                  {recognizedStudents.map(
-                    (student, index) => (
+                  {students.map(
+                    (student, index) => {
 
-                      <tr
-                        key={
-                          student.id || index
-                        }
-                      >
+                      const performance =
+                        studentPerformance.find(
+                          (item) =>
+                            item.id ===
+                              student.id ||
+                            (
+                              item.name &&
+                              student.name &&
+                              item.name.toLowerCase() ===
+                                student.name.toLowerCase()
+                            )
+                        );
 
-                        <td style={styles.td}>
+                      const recognized =
+                        recognizedStudents.find(
+                          (item) =>
+                            item.id ===
+                              student.id
+                        );
 
-                          <strong>
-                            {student.name}
-                          </strong>
+                      const attention =
+                        performance?.attention ??
+                        performance?.attentionScore ??
+                        recognized?.attention ??
+                        recognized?.attentionScore ??
+                        0;
 
-                          {student.rollNo && (
+                      const emotion =
+                        performance?.emotion ??
+                        recognized?.emotion ??
+                        "Unknown";
+
+                      const distraction =
+                        performance?.distraction ??
+                        recognized?.distraction ??
+                        "Not Available";
+
+                      const attendancePercent =
+                        getAttendancePercentage(
+                          student
+                        );
+
+                      return (
+
+                        <tr
+                          key={
+                            student.id || index
+                          }
+                        >
+
+                          <td style={styles.td}>
+
                             <div
                               style={
-                                styles.roll
+                                styles.studentCell
                               }
                             >
-                              {student.rollNo}
+
+                              <div
+                                style={
+                                  styles.studentAvatar
+                                }
+                              >
+                                {student.name
+                                  ? student.name
+                                      .charAt(0)
+                                      .toUpperCase()
+                                  : "S"}
+                              </div>
+
+                              <div>
+
+                                <strong>
+                                  {student.name ||
+                                    "Student"}
+                                </strong>
+
+                                <div
+                                  style={
+                                    styles.roll
+                                  }
+                                >
+                                  {student.rollNo ||
+                                    "No roll number"}
+                                </div>
+
+                              </div>
+
                             </div>
-                          )}
 
-                        </td>
+                          </td>
 
-                        <td style={styles.td}>
+                          <td style={styles.td}>
 
-                          <div
-                            style={
-                              styles.studentScore
-                            }
-                          >
-                            {student.attentionScore ??
-                              0}%
-                          </div>
+                            <div
+                              style={
+                                styles.attentionCell
+                              }
+                            >
 
-                        </td>
+                              <strong>
+                                {Math.round(
+                                  Number(
+                                    attention
+                                  ) || 0
+                                )}
+                                %
+                              </strong>
 
-                        <td style={styles.td}>
-                          {student.emotion ||
-                            "Unknown"}
-                        </td>
+                              <div
+                                style={
+                                  styles.miniProgress
+                                }
+                              >
 
-                        <td style={styles.td}>
+                                <div
+                                  style={{
+                                    ...styles.miniProgressFill,
+                                    width: `${Math.min(
+                                      Math.max(
+                                        Number(
+                                          attention
+                                        ) || 0,
+                                        0
+                                      ),
+                                      100
+                                    )}%`,
+                                  }}
+                                />
 
-                          <span
-                            style={
-                              student.distraction ===
-                              "Distracted"
-                                ? styles.distractedBadge
-                                : styles.focusedBadge
-                            }
-                          >
-                            {student.distraction ||
-                              "Not Available"}
-                          </span>
+                              </div>
 
-                        </td>
+                            </div>
 
-                      </tr>
+                          </td>
 
-                    )
+                          <td style={styles.td}>
+
+                            <span
+                              style={
+                                styles.emotionBadge
+                              }
+                            >
+                              {getEmotionEmoji(
+                                emotion
+                              )}{" "}
+                              {emotion}
+                            </span>
+
+                          </td>
+
+                          <td style={styles.td}>
+
+                            <span
+                              style={
+                                distraction ===
+                                "Distracted"
+                                  ? styles.distractedBadge
+                                  : styles.focusedBadge
+                              }
+                            >
+                              {distraction ||
+                                "Not Available"}
+                            </span>
+
+                          </td>
+
+                          <td style={styles.td}>
+
+                            <span
+                              style={{
+                                ...styles.attendanceBadge,
+                                ...getAttendanceBadgeStyle(
+                                  attendancePercent
+                                ),
+                              }}
+                            >
+                              {attendancePercent}%
+                            </span>
+
+                          </td>
+
+                        </tr>
+
+                      );
+                    }
                   )}
 
                 </tbody>
@@ -669,9 +1078,12 @@ function Analytics() {
 
         </section>
 
+        {/* ================================== */}
         {/* FOOTER */}
+        {/* ================================== */}
+
         <footer style={styles.footer}>
-          🤖 AI Smart Classroom • Analytics
+          🤖 AI Smart Classroom • Real-time Analytics
         </footer>
 
       </main>
@@ -681,10 +1093,125 @@ function Analytics() {
 }
 
 // ======================================================
-// EMOTION BAR COMPONENT
+// GET MAIN EMOTION
 // ======================================================
 
-function EmotionBar({ emoji, name, value }) {
+function getMainEmotion(emotionCounts) {
+  const entries = Object.entries(emotionCounts);
+
+  if (
+    entries.every(
+      ([, count]) => count === 0
+    )
+  ) {
+    return "Waiting";
+  }
+
+  entries.sort((a, b) => b[1] - a[1]);
+
+  const emotion = entries[0][0];
+
+  return (
+    emotion.charAt(0).toUpperCase() +
+    emotion.slice(1)
+  );
+}
+
+// ======================================================
+// EMOTION EMOJI
+// ======================================================
+
+function getEmotionEmoji(emotion) {
+  const value = String(
+    emotion || ""
+  ).toLowerCase();
+
+  const emojis = {
+    happy: "😊",
+    neutral: "😐",
+    sad: "😢",
+    angry: "😠",
+    fearful: "😨",
+    disgusted: "🤢",
+    surprised: "😲",
+  };
+
+  return emojis[value] || "🙂";
+}
+
+// ======================================================
+// METRIC BOX
+// ======================================================
+
+function MetricBox({
+  icon,
+  title,
+  value,
+  description,
+  percentage,
+  type,
+}) {
+  return (
+    <div style={styles.metricBox}>
+
+      <div style={styles.metricTop}>
+
+        <span style={styles.metricIcon}>
+          {icon}
+        </span>
+
+        <div>
+
+          <p style={styles.metricTitle}>
+            {title}
+          </p>
+
+          <h3 style={styles.metricValue}>
+            {value}
+          </h3>
+
+        </div>
+
+      </div>
+
+      <div style={styles.metricProgressBackground}>
+
+        <div
+          style={{
+            ...styles.metricProgress,
+            background:
+              type === "distraction"
+                ? "linear-gradient(90deg,#f59e0b,#ef4444)"
+                : "linear-gradient(90deg,#2563eb,#4f46e5)",
+            width: `${Math.min(
+              Math.max(
+                Number(percentage) || 0,
+                0
+              ),
+              100
+            )}%`,
+          }}
+        />
+
+      </div>
+
+      <p style={styles.metricDescription}>
+        {description}
+      </p>
+
+    </div>
+  );
+}
+
+// ======================================================
+// EMOTION BAR
+// ======================================================
+
+function EmotionBar({
+  emoji,
+  name,
+  value,
+}) {
   return (
     <div style={styles.emotionItem}>
 
@@ -716,10 +1243,115 @@ function EmotionBar({ emoji, name, value }) {
 }
 
 // ======================================================
+// ATTENDANCE BOX
+// ======================================================
+
+function AttendanceBox({
+  icon,
+  title,
+  value,
+  description,
+  styleType,
+}) {
+  const colorStyles = {
+    good: {
+      background: "#f0fdf4",
+      border: "#bbf7d0",
+      text: "#15803d",
+    },
+
+    average: {
+      background: "#fffbeb",
+      border: "#fde68a",
+      text: "#b45309",
+    },
+
+    poor: {
+      background: "#fef2f2",
+      border: "#fecaca",
+      text: "#dc2626",
+    },
+  };
+
+  const selected =
+    colorStyles[styleType];
+
+  return (
+    <div
+      style={{
+        ...styles.attendanceBox,
+        background: selected.background,
+        borderColor: selected.border,
+      }}
+    >
+
+      <div style={styles.attendanceIcon}>
+        {icon}
+      </div>
+
+      <div>
+
+        <p
+          style={{
+            ...styles.attendanceTitle,
+            color: selected.text,
+          }}
+        >
+          {title}
+        </p>
+
+        <h3
+          style={{
+            ...styles.attendanceNumber,
+            color: selected.text,
+          }}
+        >
+          {value}
+        </h3>
+
+        <p style={styles.attendanceDescription}>
+          {description}
+        </p>
+
+      </div>
+
+    </div>
+  );
+}
+
+// ======================================================
+// ATTENDANCE BADGE STYLE
+// ======================================================
+
+function getAttendanceBadgeStyle(
+  percentage
+) {
+  if (percentage >= 75) {
+    return {
+      background: "#dcfce7",
+      color: "#15803d",
+    };
+  }
+
+  if (percentage >= 50) {
+    return {
+      background: "#fef3c7",
+      color: "#b45309",
+    };
+  }
+
+  return {
+    background: "#fee2e2",
+    color: "#dc2626",
+  };
+}
+
+// ======================================================
 // STYLES
 // ======================================================
 
 const styles = {
+
   page: {
     minHeight: "100vh",
     background: "#f8fafc",
@@ -813,6 +1445,12 @@ const styles = {
     marginBottom: "28px",
   },
 
+  headerRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  },
+
   heading: {
     margin: 0,
     fontSize: "28px",
@@ -841,6 +1479,16 @@ const styles = {
     width: "8px",
     height: "8px",
     borderRadius: "50%",
+  },
+
+  monitorButton: {
+    textDecoration: "none",
+    background: "#2563eb",
+    color: "white",
+    padding: "10px 14px",
+    borderRadius: "9px",
+    fontSize: "12px",
+    fontWeight: "700",
   },
 
   statsGrid: {
@@ -886,12 +1534,6 @@ const styles = {
     fontWeight: "800",
   },
 
-  emotionValue: {
-    margin: "4px 0 0",
-    fontSize: "18px",
-    fontWeight: "800",
-  },
-
   small: {
     margin: "3px 0 0",
     fontSize: "10px",
@@ -927,6 +1569,79 @@ const styles = {
     margin: "4px 0 0",
     fontSize: "11px",
     color: "#64748b",
+  },
+
+  liveBadge: {
+    background: "#dcfce7",
+    color: "#15803d",
+    padding: "7px 11px",
+    borderRadius: "20px",
+    fontSize: "10px",
+    fontWeight: "700",
+  },
+
+  overviewGrid: {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(3, minmax(0, 1fr))",
+    gap: "16px",
+  },
+
+  metricBox: {
+    padding: "18px",
+    border: "1px solid #e2e8f0",
+    borderRadius: "12px",
+    background: "#f8fafc",
+  },
+
+  metricTop: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    marginBottom: "15px",
+  },
+
+  metricIcon: {
+    width: "40px",
+    height: "40px",
+    borderRadius: "10px",
+    background: "white",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "20px",
+  },
+
+  metricTitle: {
+    margin: 0,
+    color: "#64748b",
+    fontSize: "10px",
+    fontWeight: "700",
+  },
+
+  metricValue: {
+    margin: "3px 0 0",
+    fontSize: "20px",
+    fontWeight: "800",
+  },
+
+  metricProgressBackground: {
+    height: "7px",
+    background: "#e2e8f0",
+    borderRadius: "10px",
+    overflow: "hidden",
+  },
+
+  metricProgress: {
+    height: "100%",
+    borderRadius: "10px",
+    transition: "width 0.5s ease",
+  },
+
+  metricDescription: {
+    margin: "8px 0 0",
+    color: "#94a3b8",
+    fontSize: "10px",
   },
 
   scoreBadge: {
@@ -988,14 +1703,42 @@ const styles = {
     fontSize: "12px",
   },
 
-  emptyState: {
-    textAlign: "center",
-    padding: "40px 20px",
-    color: "#64748b",
+  attendanceDistribution: {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(3, minmax(0, 1fr))",
+    gap: "16px",
   },
 
-  emptyIcon: {
-    fontSize: "40px",
+  attendanceBox: {
+    display: "flex",
+    alignItems: "center",
+    gap: "14px",
+    padding: "18px",
+    border: "1px solid",
+    borderRadius: "12px",
+  },
+
+  attendanceIcon: {
+    fontSize: "25px",
+  },
+
+  attendanceTitle: {
+    margin: 0,
+    fontSize: "11px",
+    fontWeight: "700",
+  },
+
+  attendanceNumber: {
+    margin: "3px 0",
+    fontSize: "25px",
+    fontWeight: "800",
+  },
+
+  attendanceDescription: {
+    margin: 0,
+    color: "#64748b",
+    fontSize: "10px",
   },
 
   tableWrapper: {
@@ -1013,13 +1756,34 @@ const styles = {
     fontSize: "11px",
     color: "#64748b",
     background: "#f8fafc",
-    borderBottom: "1px solid #e2e8f0",
+    borderBottom:
+      "1px solid #e2e8f0",
   },
 
   td: {
     padding: "13px 12px",
     fontSize: "12px",
-    borderBottom: "1px solid #f1f5f9",
+    borderBottom:
+      "1px solid #f1f5f9",
+  },
+
+  studentCell: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  },
+
+  studentAvatar: {
+    width: "36px",
+    height: "36px",
+    borderRadius: "50%",
+    background: "#dbeafe",
+    color: "#2563eb",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "800",
+    fontSize: "13px",
   },
 
   roll: {
@@ -1028,9 +1792,32 @@ const styles = {
     marginTop: "3px",
   },
 
-  studentScore: {
-    fontWeight: "800",
-    color: "#2563eb",
+  attentionCell: {
+    minWidth: "100px",
+  },
+
+  miniProgress: {
+    marginTop: "5px",
+    height: "5px",
+    background: "#e2e8f0",
+    borderRadius: "10px",
+    overflow: "hidden",
+  },
+
+  miniProgressFill: {
+    height: "100%",
+    background:
+      "linear-gradient(90deg,#2563eb,#4f46e5)",
+    borderRadius: "10px",
+  },
+
+  emotionBadge: {
+    background: "#f1f5f9",
+    color: "#334155",
+    padding: "6px 9px",
+    borderRadius: "20px",
+    fontSize: "10px",
+    fontWeight: "600",
   },
 
   distractedBadge: {
@@ -1048,6 +1835,36 @@ const styles = {
     padding: "5px 9px",
     borderRadius: "20px",
     fontSize: "10px",
+    fontWeight: "700",
+  },
+
+  attendanceBadge: {
+    display: "inline-block",
+    padding: "5px 9px",
+    borderRadius: "20px",
+    fontSize: "10px",
+    fontWeight: "700",
+  },
+
+  emptyState: {
+    textAlign: "center",
+    padding: "40px 20px",
+    color: "#64748b",
+  },
+
+  emptyIcon: {
+    fontSize: "40px",
+  },
+
+  primaryButton: {
+    display: "inline-block",
+    marginTop: "12px",
+    background: "#2563eb",
+    color: "white",
+    textDecoration: "none",
+    padding: "10px 15px",
+    borderRadius: "8px",
+    fontSize: "11px",
     fontWeight: "700",
   },
 

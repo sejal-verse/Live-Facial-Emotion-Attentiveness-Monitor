@@ -27,22 +27,28 @@ function StudentRegistration() {
   const [faceDetected, setFaceDetected] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // ==============================
+  // ==========================================
   // LOAD FACE-API MODELS
-  // ==============================
+  // ==========================================
   useEffect(() => {
     const loadModels = async () => {
       try {
+        console.log("Loading Face AI models...");
+
         await faceapi.nets.tinyFaceDetector.loadFromUri("/models");
         await faceapi.nets.faceLandmark68Net.loadFromUri("/models");
         await faceapi.nets.faceRecognitionNet.loadFromUri("/models");
 
         setModelsLoaded(true);
-        console.log("Face API models loaded");
+
+        console.log("Face AI models loaded successfully");
       } catch (error) {
-        console.error("Model loading error:", error);
+        console.error("MODEL LOADING ERROR:", error);
+
         alert(
-          "Face AI models could not be loaded.\n\nMake sure the models are inside public/models."
+          `Face AI models could not be loaded.\n\n${
+            error?.message || "Check the files inside public/models."
+          }`
         );
       }
     };
@@ -51,56 +57,125 @@ function StudentRegistration() {
 
     return () => {
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current.getTracks().forEach((track) => {
+          track.stop();
+        });
       }
     };
   }, []);
 
-  // ==============================
+  // ==========================================
   // START CAMERA
-  // ==============================
+  // ==========================================
   const startCamera = async () => {
     try {
+      console.log("Starting camera...");
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert(
+          "Camera is not supported by this browser."
+        );
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
+        video: {
+          width: {
+            ideal: 640,
+          },
+          height: {
+            ideal: 480,
+          },
+          facingMode: "user",
+        },
         audio: false,
       });
 
+      console.log("Camera permission granted");
+
       streamRef.current = stream;
 
+      // Mark camera as started first.
+      // The video element is already present in this component.
+      setCameraStarted(true);
+
+      // Attach stream to video
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
 
-      setCameraStarted(true);
+        try {
+          await videoRef.current.play();
+
+          console.log("Camera started successfully");
+          console.log(
+            "Video size:",
+            videoRef.current.videoWidth,
+            videoRef.current.videoHeight
+          );
+        } catch (playError) {
+          console.error("Video play error:", playError);
+        }
+      }
     } catch (error) {
       console.error("Camera error:", error);
 
-      alert(
-        "Camera access denied.\n\nPlease allow camera permission in your browser."
-      );
+      let message = "Unable to access the camera.";
+
+      if (error?.name === "NotAllowedError") {
+        message =
+          "Camera permission was denied.\n\nPlease allow camera permission and try again.";
+      } else if (error?.name === "NotFoundError") {
+        message =
+          "No camera was found on this device.";
+      } else if (error?.name === "NotReadableError") {
+        message =
+          "Camera is already being used by another application.";
+      } else if (error?.name === "OverconstrainedError") {
+        message =
+          "Camera does not support the requested settings.";
+      } else if (error?.message) {
+        message = error.message;
+      }
+
+      alert(message);
     }
   };
 
-  // ==============================
+  // ==========================================
   // CAPTURE PHOTO + FACE DESCRIPTOR
-  // ==============================
+  // ==========================================
   const capturePhoto = async () => {
     if (!modelsLoaded) {
-      alert("Face AI models are still loading. Please wait.");
+      alert(
+        "Face AI models are still loading. Please wait."
+      );
       return;
     }
 
     if (!cameraStarted || !videoRef.current) {
-      alert("Please start the camera first.");
+      alert(
+        "Please start the camera first."
+      );
+      return;
+    }
+
+    const video = videoRef.current;
+
+    if (
+      video.readyState < 2 ||
+      video.videoWidth === 0 ||
+      video.videoHeight === 0
+    ) {
+      alert(
+        "Camera video is not ready yet. Please wait a moment and try again."
+      );
       return;
     }
 
     setLoading(true);
 
     try {
-      const video = videoRef.current;
+      console.log("Detecting face...");
 
       const detection = await faceapi
         .detectSingleFace(
@@ -115,15 +190,22 @@ function StudentRegistration() {
 
       if (!detection) {
         setFaceDetected(false);
+
         alert(
           "No face detected.\n\nPlease sit in front of the camera and try again."
         );
+
         setLoading(false);
         return;
       }
 
+      console.log("Face detected successfully");
+
       setFaceDetected(true);
 
+      // ==========================================
+      // CAPTURE IMAGE
+      // ==========================================
       const canvas = canvasRef.current;
 
       canvas.width = video.videoWidth;
@@ -131,6 +213,7 @@ function StudentRegistration() {
 
       const context = canvas.getContext("2d");
 
+      // Draw normal orientation
       context.drawImage(
         video,
         0,
@@ -139,27 +222,41 @@ function StudentRegistration() {
         canvas.height
       );
 
-      const imageData = canvas.toDataURL("image/jpeg", 0.8);
+      const imageData = canvas.toDataURL(
+        "image/jpeg",
+        0.8
+      );
 
       setPhoto(imageData);
 
-      alert("Face captured successfully! ✅");
+      alert(
+        "Face captured successfully! ✅"
+      );
     } catch (error) {
-      console.error("Face detection error:", error);
+      console.error(
+        "Face detection error:",
+        error
+      );
 
-      alert("Unable to detect face. Please try again.");
+      alert(
+        `Unable to detect face.\n\n${
+          error?.message || "Please try again."
+        }`
+      );
     }
 
     setLoading(false);
   };
 
-  // ==============================
+  // ==========================================
   // REGISTER STUDENT
-  // ==============================
+  // ==========================================
   const handleRegister = async (e) => {
     e.preventDefault();
 
-    // Basic validation
+    // ------------------------------------------
+    // BASIC VALIDATION
+    // ------------------------------------------
     if (!name.trim()) {
       alert("Please enter student name.");
       return;
@@ -196,7 +293,9 @@ function StudentRegistration() {
     }
 
     if (password.length < 6) {
-      alert("Password must contain at least 6 characters.");
+      alert(
+        "Password must contain at least 6 characters."
+      );
       return;
     }
 
@@ -216,16 +315,24 @@ function StudentRegistration() {
     }
 
     if (!faceDetected) {
-      alert("Please capture a valid face before registering.");
+      alert(
+        "Please capture a valid face before registering."
+      );
       return;
     }
 
-    // Get existing students
+    // ------------------------------------------
+    // GET EXISTING STUDENTS
+    // ------------------------------------------
     const students = JSON.parse(
-      localStorage.getItem("registeredStudents") || "[]"
+      localStorage.getItem(
+        "registeredStudents"
+      ) || "[]"
     );
 
-    // Check duplicate roll number
+    // ------------------------------------------
+    // CHECK DUPLICATE ROLL NUMBER
+    // ------------------------------------------
     const existingRoll = students.find(
       (student) =>
         student.rollNo?.toLowerCase() ===
@@ -233,11 +340,15 @@ function StudentRegistration() {
     );
 
     if (existingRoll) {
-      alert("This roll number is already registered.");
+      alert(
+        "This roll number is already registered."
+      );
       return;
     }
 
-    // Check duplicate email
+    // ------------------------------------------
+    // CHECK DUPLICATE EMAIL
+    // ------------------------------------------
     const existingEmail = students.find(
       (student) =>
         student.email?.toLowerCase() ===
@@ -245,17 +356,34 @@ function StudentRegistration() {
     );
 
     if (existingEmail) {
-      alert("This email is already registered.");
+      alert(
+        "This email is already registered."
+      );
       return;
     }
 
-    // Get face descriptor
+    // ------------------------------------------
+    // CREATE FACE DESCRIPTOR
+    // ------------------------------------------
     let descriptor = null;
 
     try {
+      const video = videoRef.current;
+
+      if (
+        !video ||
+        video.readyState < 2 ||
+        video.videoWidth === 0
+      ) {
+        alert(
+          "Camera is not ready. Please capture your face again."
+        );
+        return;
+      }
+
       const detection = await faceapi
         .detectSingleFace(
-          videoRef.current,
+          video,
           new faceapi.TinyFaceDetectorOptions({
             inputSize: 320,
             scoreThreshold: 0.5,
@@ -265,10 +393,15 @@ function StudentRegistration() {
         .withFaceDescriptor();
 
       if (detection) {
-        descriptor = Array.from(detection.descriptor);
+        descriptor = Array.from(
+          detection.descriptor
+        );
       }
     } catch (error) {
-      console.error("Descriptor error:", error);
+      console.error(
+        "Descriptor error:",
+        error
+      );
     }
 
     if (!descriptor) {
@@ -278,31 +411,47 @@ function StudentRegistration() {
       return;
     }
 
-    // Student object
+    // ------------------------------------------
+    // CREATE STUDENT OBJECT
+    // ------------------------------------------
     const newStudent = {
       id: Date.now(),
+
       name: name.trim(),
+
       rollNo: rollNo.trim(),
+
       email: email.trim(),
+
       department,
+
       semester,
+
       phone: phone.trim(),
 
       // Prototype only
       password,
 
       photo,
+
       descriptor,
 
-      registeredAt: new Date().toISOString(),
+      registeredAt:
+        new Date().toISOString(),
+
       status: "Registered",
 
       // Initial AI values
       attention: 0,
+
       emotion: "Neutral",
+
       distraction: "Not Distracted",
     };
 
+    // ------------------------------------------
+    // SAVE STUDENT
+    // ------------------------------------------
     students.push(newStudent);
 
     localStorage.setItem(
@@ -310,10 +459,20 @@ function StudentRegistration() {
       JSON.stringify(students)
     );
 
-    // Stop camera
+    // ------------------------------------------
+    // STOP CAMERA
+    // ------------------------------------------
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current
+        .getTracks()
+        .forEach((track) => {
+          track.stop();
+        });
+
+      streamRef.current = null;
     }
+
+    setCameraStarted(false);
 
     alert(
       "Student registered successfully! 🎉\n\nYou can now login using your email or roll number."
@@ -322,9 +481,9 @@ function StudentRegistration() {
     navigate("/student-login");
   };
 
-  // ==============================
+  // ==========================================
   // STYLES
-  // ==============================
+  // ==========================================
   const styles = {
     page: {
       minHeight: "100vh",
@@ -376,7 +535,8 @@ function StudentRegistration() {
       background: "#ffffff",
       borderRadius: "24px",
       padding: "35px",
-      boxShadow: "0 20px 55px rgba(15, 23, 42, 0.12)",
+      boxShadow:
+        "0 20px 55px rgba(15, 23, 42, 0.12)",
       border: "1px solid #e2e8f0",
     },
 
@@ -486,10 +646,12 @@ function StudentRegistration() {
 
     video: {
       width: "100%",
-      maxWidth: "520px",
+      maxWidth: "640px",
+      minHeight: "360px",
       borderRadius: "18px",
       background: "#0f172a",
       border: "3px solid #e2e8f0",
+      objectFit: "cover",
       transform: "scaleX(-1)",
     },
 
@@ -573,20 +735,26 @@ function StudentRegistration() {
     },
   };
 
+  // ==========================================
+  // PAGE
+  // ==========================================
   return (
     <div style={styles.page}>
       <div style={styles.container}>
 
         {/* HEADER */}
         <div style={styles.header}>
-          <div style={styles.logo}>🎓</div>
+          <div style={styles.logo}>
+            🤖
+          </div>
 
           <h1 style={styles.title}>
-            Student Registration
+            Face Registration
           </h1>
 
           <p style={styles.subtitle}>
-            Create your AI Smart Classroom student account
+            Your face will be used for smart attendance
+            and classroom monitoring.
           </p>
         </div>
 
@@ -602,6 +770,7 @@ function StudentRegistration() {
 
             <div style={styles.grid}>
 
+              {/* NAME */}
               <div style={styles.inputGroup}>
                 <label style={styles.label}>
                   Full Name
@@ -611,11 +780,14 @@ function StudentRegistration() {
                   type="text"
                   placeholder="Enter full name"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) =>
+                    setName(e.target.value)
+                  }
                   style={styles.input}
                 />
               </div>
 
+              {/* ROLL NUMBER */}
               <div style={styles.inputGroup}>
                 <label style={styles.label}>
                   Roll Number
@@ -625,11 +797,14 @@ function StudentRegistration() {
                   type="text"
                   placeholder="Enter roll number"
                   value={rollNo}
-                  onChange={(e) => setRollNo(e.target.value)}
+                  onChange={(e) =>
+                    setRollNo(e.target.value)
+                  }
                   style={styles.input}
                 />
               </div>
 
+              {/* EMAIL */}
               <div style={styles.inputGroup}>
                 <label style={styles.label}>
                   Email
@@ -639,11 +814,14 @@ function StudentRegistration() {
                   type="email"
                   placeholder="Enter email address"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) =>
+                    setEmail(e.target.value)
+                  }
                   style={styles.input}
                 />
               </div>
 
+              {/* PHONE */}
               <div style={styles.inputGroup}>
                 <label style={styles.label}>
                   Phone Number
@@ -653,11 +831,14 @@ function StudentRegistration() {
                   type="tel"
                   placeholder="Enter phone number"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) =>
+                    setPhone(e.target.value)
+                  }
                   style={styles.input}
                 />
               </div>
 
+              {/* DEPARTMENT */}
               <div style={styles.inputGroup}>
                 <label style={styles.label}>
                   Department
@@ -673,27 +854,34 @@ function StudentRegistration() {
                   <option value="">
                     Select Department
                   </option>
+
                   <option value="CSE">
                     Computer Science & Engineering
                   </option>
+
                   <option value="ECE">
                     Electronics & Communication
                   </option>
+
                   <option value="EEE">
                     Electrical & Electronics
                   </option>
+
                   <option value="ME">
                     Mechanical Engineering
                   </option>
+
                   <option value="CE">
                     Civil Engineering
                   </option>
+
                   <option value="IT">
                     Information Technology
                   </option>
                 </select>
               </div>
 
+              {/* SEMESTER */}
               <div style={styles.inputGroup}>
                 <label style={styles.label}>
                   Semester
@@ -709,27 +897,35 @@ function StudentRegistration() {
                   <option value="">
                     Select Semester
                   </option>
+
                   <option value="1st Semester">
                     1st Semester
                   </option>
+
                   <option value="2nd Semester">
                     2nd Semester
                   </option>
+
                   <option value="3rd Semester">
                     3rd Semester
                   </option>
+
                   <option value="4th Semester">
                     4th Semester
                   </option>
+
                   <option value="5th Semester">
                     5th Semester
                   </option>
+
                   <option value="6th Semester">
                     6th Semester
                   </option>
+
                   <option value="7th Semester">
                     7th Semester
                   </option>
+
                   <option value="8th Semester">
                     8th Semester
                   </option>
@@ -738,7 +934,7 @@ function StudentRegistration() {
 
             </div>
 
-            {/* PASSWORD */}
+            {/* ACCOUNT SECURITY */}
             <div style={{ marginTop: "10px" }}>
 
               <h2 style={styles.sectionTitle}>
@@ -747,13 +943,18 @@ function StudentRegistration() {
 
               <div style={styles.grid}>
 
+                {/* PASSWORD */}
                 <div style={styles.inputGroup}>
                   <label style={styles.label}>
                     Password
                   </label>
 
-                  <div style={styles.passwordWrapper}>
-                    <span style={styles.passwordIcon}>
+                  <div
+                    style={styles.passwordWrapper}
+                  >
+                    <span
+                      style={styles.passwordIcon}
+                    >
                       🔒
                     </span>
 
@@ -774,7 +975,9 @@ function StudentRegistration() {
                     <button
                       type="button"
                       onClick={() =>
-                        setShowPassword(!showPassword)
+                        setShowPassword(
+                          !showPassword
+                        )
                       }
                       style={styles.showButton}
                     >
@@ -784,18 +987,25 @@ function StudentRegistration() {
                     </button>
                   </div>
 
-                  <p style={styles.passwordHint}>
+                  <p
+                    style={styles.passwordHint}
+                  >
                     Minimum 6 characters
                   </p>
                 </div>
 
+                {/* CONFIRM PASSWORD */}
                 <div style={styles.inputGroup}>
                   <label style={styles.label}>
                     Confirm Password
                   </label>
 
-                  <div style={styles.passwordWrapper}>
-                    <span style={styles.passwordIcon}>
+                  <div
+                    style={styles.passwordWrapper}
+                  >
+                    <span
+                      style={styles.passwordIcon}
+                    >
                       🔒
                     </span>
 
@@ -854,6 +1064,23 @@ function StudentRegistration() {
 
               <div style={styles.cameraBox}>
 
+                {/* VIDEO IS ALWAYS PRESENT */}
+                <video
+                  ref={videoRef}
+                  style={{
+                    ...styles.video,
+                    display: cameraStarted
+                      ? "block"
+                      : "none",
+                  }}
+                  autoPlay
+                  muted
+                  playsInline
+                  width="640"
+                  height="480"
+                />
+
+                {/* START CAMERA BUTTON */}
                 {!cameraStarted && (
                   <button
                     type="button"
@@ -864,34 +1091,27 @@ function StudentRegistration() {
                   </button>
                 )}
 
+                {/* CANVAS */}
+                <canvas
+                  ref={canvasRef}
+                  style={styles.canvas}
+                />
+
+                {/* CAPTURE BUTTON */}
                 {cameraStarted && (
-                  <>
-                    <video
-                      ref={videoRef}
-                      style={styles.video}
-                      autoPlay
-                      muted
-                      playsInline
-                    />
-
-                    <canvas
-                      ref={canvasRef}
-                      style={styles.canvas}
-                    />
-
-                    <button
-                      type="button"
-                      onClick={capturePhoto}
-                      style={styles.captureButton}
-                      disabled={loading}
-                    >
-                      {loading
-                        ? "Detecting Face..."
-                        : "📸 Capture Face"}
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={capturePhoto}
+                    style={styles.captureButton}
+                    disabled={loading}
+                  >
+                    {loading
+                      ? "Detecting Face..."
+                      : "📸 Capture Face"}
+                  </button>
                 )}
 
+                {/* PHOTO PREVIEW */}
                 {photo && faceDetected && (
                   <>
                     <img
@@ -930,6 +1150,7 @@ function StudentRegistration() {
 
         </div>
 
+        {/* FOOTER */}
         <p style={styles.footer}>
           🤖 AI Smart Classroom
         </p>

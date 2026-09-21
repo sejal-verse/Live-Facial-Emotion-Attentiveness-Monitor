@@ -9,59 +9,75 @@ function Attendance() {
   );
   const [search, setSearch] = useState("");
 
-  // ================= LOAD STUDENTS =================
-  const loadStudents = () => {
+  // ================= LOAD DATA =================
+
+  const loadData = () => {
     const registeredStudents = JSON.parse(
       localStorage.getItem("registeredStudents") || "[]"
     );
 
-    setStudents(registeredStudents);
-  };
-
-  // ================= LOAD ATTENDANCE =================
-  const loadAttendance = () => {
     const savedAttendance = JSON.parse(
       localStorage.getItem("classAttendance") || "{}"
     );
 
+    setStudents(registeredStudents);
     setAttendance(savedAttendance);
   };
 
   useEffect(() => {
-    loadStudents();
-    loadAttendance();
+    loadData();
 
-    // Refresh automatically
     const interval = setInterval(() => {
-      loadStudents();
-      loadAttendance();
+      loadData();
     }, 2000);
 
     return () => clearInterval(interval);
   }, []);
 
-  // ================= TODAY'S ATTENDANCE =================
-  const todayAttendance =
-    attendance[selectedDate] || {};
+  // ================= SELECTED DATE =================
 
-  // ================= FILTER STUDENTS =================
+  const todayAttendance = attendance[selectedDate] || {};
+
+  // ================= TRACKED DAYS =================
+
+  const attendanceDates = Object.keys(attendance).sort();
+
+  const totalTrackedDays = attendanceDates.length;
+
+  // ================= SEARCH =================
+
   const filteredStudents = students.filter((student) => {
     const text = search.toLowerCase();
 
     return (
-      (student.name || "")
-        .toLowerCase()
-        .includes(text) ||
-      (student.rollNo || "")
-        .toLowerCase()
-        .includes(text) ||
-      (student.email || "")
-        .toLowerCase()
-        .includes(text)
+      (student.name || "").toLowerCase().includes(text) ||
+      (student.rollNo || "").toLowerCase().includes(text) ||
+      (student.email || "").toLowerCase().includes(text) ||
+      (student.department || "").toLowerCase().includes(text)
     );
   });
 
-  // ================= COUNTS =================
+  // ================= ATTENDANCE FUNCTIONS =================
+
+  const getPresentDays = (student) => {
+    return attendanceDates.filter(
+      (date) =>
+        attendance[date]?.[student.name] === "Present"
+    ).length;
+  };
+
+  const getAttendancePercentage = (student) => {
+    if (totalTrackedDays === 0) return 0;
+
+    const presentDays = getPresentDays(student);
+
+    return Math.round(
+      (presentDays / totalTrackedDays) * 100
+    );
+  };
+
+  // ================= TODAY COUNTS =================
+
   const presentCount = students.filter(
     (student) =>
       todayAttendance[student.name] === "Present"
@@ -77,10 +93,25 @@ function Attendance() {
         )
       : 0;
 
+  // ================= PERCENTAGE COLOR =================
+
+  const getPercentageStyle = (percentage) => {
+    if (percentage >= 75) {
+      return styles.goodPercentage;
+    }
+
+    if (percentage >= 50) {
+      return styles.mediumPercentage;
+    }
+
+    return styles.lowPercentage;
+  };
+
   return (
     <div style={styles.app}>
 
       {/* ================= SIDEBAR ================= */}
+
       <aside style={styles.sidebar}>
 
         <div style={styles.logoSection}>
@@ -161,6 +192,7 @@ function Attendance() {
         </nav>
 
         {/* AI BOX */}
+
         <div style={styles.sidebarBottom}>
 
           <div style={styles.aiBox}>
@@ -170,6 +202,7 @@ function Attendance() {
             </div>
 
             <div>
+
               <strong>
                 AI Monitoring
               </strong>
@@ -177,6 +210,7 @@ function Attendance() {
               <p style={styles.aiText}>
                 Face recognition attendance
               </p>
+
             </div>
 
           </div>
@@ -186,9 +220,11 @@ function Attendance() {
       </aside>
 
       {/* ================= MAIN ================= */}
+
       <main style={styles.main}>
 
         {/* HEADER */}
+
         <header style={styles.header}>
 
           <div>
@@ -212,7 +248,8 @@ function Attendance() {
 
         </header>
 
-        {/* ================= DATE + SEARCH ================= */}
+        {/* ================= CONTROLS ================= */}
+
         <section style={styles.controlPanel}>
 
           <div>
@@ -240,7 +277,7 @@ function Attendance() {
 
             <input
               type="text"
-              placeholder="Search by name, roll number..."
+              placeholder="Search by name, roll number, department..."
               value={search}
               onChange={(e) =>
                 setSearch(e.target.value)
@@ -253,6 +290,7 @@ function Attendance() {
         </section>
 
         {/* ================= STAT CARDS ================= */}
+
         <section style={styles.cards}>
 
           <div style={styles.card}>
@@ -262,6 +300,7 @@ function Attendance() {
             </div>
 
             <div>
+
               <p style={styles.cardLabel}>
                 TOTAL STUDENTS
               </p>
@@ -269,6 +308,7 @@ function Attendance() {
               <h2 style={styles.cardNumber}>
                 {students.length}
               </h2>
+
             </div>
 
           </div>
@@ -285,6 +325,7 @@ function Attendance() {
             </div>
 
             <div>
+
               <p style={styles.cardLabel}>
                 PRESENT
               </p>
@@ -292,6 +333,7 @@ function Attendance() {
               <h2 style={styles.cardNumber}>
                 {presentCount}
               </h2>
+
             </div>
 
           </div>
@@ -308,6 +350,7 @@ function Attendance() {
             </div>
 
             <div>
+
               <p style={styles.cardLabel}>
                 ABSENT
               </p>
@@ -315,6 +358,7 @@ function Attendance() {
               <h2 style={styles.cardNumber}>
                 {absentCount}
               </h2>
+
             </div>
 
           </div>
@@ -331,20 +375,46 @@ function Attendance() {
             </div>
 
             <div>
+
               <p style={styles.cardLabel}>
-                ATTENDANCE
+                TODAY ATTENDANCE
               </p>
 
               <h2 style={styles.cardNumber}>
                 {attendancePercentage}%
               </h2>
+
             </div>
 
           </div>
 
         </section>
 
+        {/* ================= TRACKING INFO ================= */}
+
+        <div style={styles.trackingBar}>
+
+          <div>
+
+            <span style={styles.trackingIcon}>
+              📅
+            </span>
+
+            <strong>
+              Attendance Records
+            </strong>
+
+          </div>
+
+          <span style={styles.trackingCount}>
+            {totalTrackedDays} day
+            {totalTrackedDays !== 1 ? "s" : ""} tracked
+          </span>
+
+        </div>
+
         {/* ================= ATTENDANCE TABLE ================= */}
+
         <section style={styles.panel}>
 
           <div style={styles.panelHeader}>
@@ -380,8 +450,7 @@ function Attendance() {
               </h3>
 
               <p>
-                Register students first to view
-                attendance.
+                Register students first to view attendance.
               </p>
 
               <Link
@@ -406,7 +475,7 @@ function Attendance() {
               </h3>
 
               <p>
-                Try another name or roll number.
+                Try another name, roll number or department.
               </p>
 
             </div>
@@ -434,7 +503,15 @@ function Attendance() {
                     </th>
 
                     <th style={styles.th}>
-                      Status
+                      Today
+                    </th>
+
+                    <th style={styles.th}>
+                      Present Days
+                    </th>
+
+                    <th style={styles.th}>
+                      Attendance %
                     </th>
 
                   </tr>
@@ -451,7 +528,14 @@ function Attendance() {
                           student.name
                         ] || "Absent";
 
+                      const presentDays =
+                        getPresentDays(student);
+
+                      const percentage =
+                        getAttendancePercentage(student);
+
                       return (
+
                         <tr
                           key={
                             student.id || index
@@ -459,6 +543,7 @@ function Attendance() {
                         >
 
                           {/* STUDENT */}
+
                           <td style={styles.td}>
 
                             <div
@@ -501,22 +586,23 @@ function Attendance() {
 
                           </td>
 
-                          {/* ROLL NUMBER */}
+                          {/* ROLL */}
+
                           <td style={styles.td}>
                             {student.rollNo || "—"}
                           </td>
 
                           {/* DEPARTMENT */}
+
                           <td style={styles.td}>
-                            {student.department ||
-                              "—"}
+                            {student.department || "—"}
                           </td>
 
-                          {/* STATUS */}
+                          {/* TODAY STATUS */}
+
                           <td style={styles.td}>
 
-                            {status ===
-                            "Present" ? (
+                            {status === "Present" ? (
 
                               <span
                                 style={
@@ -540,7 +626,44 @@ function Attendance() {
 
                           </td>
 
+                          {/* PRESENT DAYS */}
+
+                          <td style={styles.td}>
+
+                            <strong>
+                              {presentDays}
+                            </strong>
+
+                            <span
+                              style={
+                                styles.daysText
+                              }
+                            >
+                              {" "}
+                              / {totalTrackedDays}
+                            </span>
+
+                          </td>
+
+                          {/* PERCENTAGE */}
+
+                          <td style={styles.td}>
+
+                            <span
+                              style={{
+                                ...styles.percentageBadge,
+                                ...getPercentageStyle(
+                                  percentage
+                                ),
+                              }}
+                            >
+                              {percentage}%
+                            </span>
+
+                          </td>
+
                         </tr>
+
                       );
                     }
                   )}
@@ -556,6 +679,7 @@ function Attendance() {
         </section>
 
         {/* ================= INFO ================= */}
+
         <section style={styles.infoBox}>
 
           <div style={styles.infoIcon}>
@@ -590,7 +714,6 @@ function Attendance() {
     </div>
   );
 }
-
 
 /* =========================================================
    STYLES
@@ -844,6 +967,29 @@ const styles = {
     fontSize: "25px",
   },
 
+  /* TRACKING */
+
+  trackingBar: {
+    backgroundColor: "#ffffff",
+    border: "1px solid #e2e8f0",
+    borderRadius: "12px",
+    padding: "13px 18px",
+    marginBottom: "22px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  trackingIcon: {
+    marginRight: "8px",
+  },
+
+  trackingCount: {
+    color: "#64748b",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
+
   /* PANEL */
 
   panel: {
@@ -951,6 +1097,34 @@ const styles = {
     borderRadius: "20px",
     fontSize: "11px",
     fontWeight: "600",
+  },
+
+  daysText: {
+    color: "#94a3b8",
+    fontSize: "11px",
+  },
+
+  percentageBadge: {
+    display: "inline-block",
+    padding: "6px 10px",
+    borderRadius: "20px",
+    fontSize: "11px",
+    fontWeight: "700",
+  },
+
+  goodPercentage: {
+    backgroundColor: "#dcfce7",
+    color: "#15803d",
+  },
+
+  mediumPercentage: {
+    backgroundColor: "#fef3c7",
+    color: "#b45309",
+  },
+
+  lowPercentage: {
+    backgroundColor: "#fee2e2",
+    color: "#dc2626",
   },
 
   /* EMPTY */

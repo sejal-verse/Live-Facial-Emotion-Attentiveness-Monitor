@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import * as faceapi from "face-api.js";
 
 function Monitoring() {
@@ -28,9 +29,13 @@ function Monitoring() {
 
         console.log("All AI models loaded");
       } catch (error) {
-        console.error("Model loading error:", error);
+        console.error("MODEL LOADING ERROR:", error);
 
-        setError("Unable to load AI models.");
+        setError(
+          `Unable to load AI models: ${
+            error?.message || "Unknown error"
+          }`
+        );
       }
     };
 
@@ -706,7 +711,260 @@ function Monitoring() {
   return (
     <div className="page-container">
 
-      {/* HEADER */}
+      {/* ==========================================
+          ATTRACTIVE TOP NAVIGATION
+      ========================================== */}
+      <header
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 1000,
+          height: "74px",
+          padding: "0 28px",
+          background:
+            "linear-gradient(135deg, #0f172a 0%, #172554 50%, #1e1b4b 100%)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "20px",
+          boxShadow:
+            "0 8px 25px rgba(15, 23, 42, 0.20)",
+          borderBottom:
+            "1px solid rgba(255,255,255,0.08)",
+          marginBottom: "24px",
+        }}
+      >
+
+        {/* BRAND */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "11px",
+            minWidth: "205px",
+          }}
+        >
+
+          <div
+            style={{
+              width: "43px",
+              height: "43px",
+              borderRadius: "12px",
+              background:
+                "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "21px",
+              boxShadow:
+                "0 6px 18px rgba(59,130,246,0.35)",
+            }}
+          >
+            🤖
+          </div>
+
+          <div>
+            <div
+              style={{
+                color: "#ffffff",
+                fontSize: "14px",
+                fontWeight: "800",
+                letterSpacing: "0.6px",
+                lineHeight: "1.2",
+              }}
+            >
+              AI CLASSROOM
+            </div>
+
+            <div
+              style={{
+                color: "#94a3b8",
+                fontSize: "10px",
+                marginTop: "3px",
+              }}
+            >
+              Teacher Portal
+            </div>
+          </div>
+
+        </div>
+
+        {/* NAVIGATION LINKS */}
+        <nav
+          aria-label="Main navigation"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "5px",
+            flex: 1,
+            overflowX: "auto",
+          }}
+        >
+
+          {/* DASHBOARD */}
+          <Link
+            to="/dashboard"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "7px",
+              padding: "10px 13px",
+              borderRadius: "10px",
+              color: "#cbd5e1",
+              textDecoration: "none",
+              fontSize: "12px",
+              fontWeight: "600",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span>🏠</span>
+            <span>Dashboard</span>
+          </Link>
+
+          {/* ATTENDANCE */}
+          <Link
+            to="/attendance"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "7px",
+              padding: "10px 13px",
+              borderRadius: "10px",
+              color: "#cbd5e1",
+              textDecoration: "none",
+              fontSize: "12px",
+              fontWeight: "600",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span>📋</span>
+            <span>Attendance</span>
+          </Link>
+
+          {/* MONITORING - ACTIVE */}
+          <Link
+            to="/monitoring"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "7px",
+              padding: "10px 15px",
+              borderRadius: "10px",
+              color: "#ffffff",
+              textDecoration: "none",
+              fontSize: "12px",
+              fontWeight: "700",
+              whiteSpace: "nowrap",
+              background:
+                "linear-gradient(135deg, #2563eb, #4f46e5)",
+              boxShadow:
+                "0 5px 15px rgba(37,99,235,0.35)",
+            }}
+          >
+            <span>👁️</span>
+            <span>Monitoring</span>
+          </Link>
+
+          {/* ANALYTICS */}
+          <Link
+            to="/analytics"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "7px",
+              padding: "10px 13px",
+              borderRadius: "10px",
+              color: "#cbd5e1",
+              textDecoration: "none",
+              fontSize: "12px",
+              fontWeight: "600",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span>📊</span>
+            <span>Analytics</span>
+          </Link>
+
+          {/* AI REPORTS */}
+          <Link
+            to="/reports"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "7px",
+              padding: "10px 13px",
+              borderRadius: "10px",
+              color: "#cbd5e1",
+              textDecoration: "none",
+              fontSize: "12px",
+              fontWeight: "600",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span>🤖</span>
+            <span>AI Reports</span>
+          </Link>
+
+        </nav>
+
+        {/* TEACHER PROFILE */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "9px",
+            minWidth: "145px",
+            justifyContent: "flex-end",
+          }}
+        >
+
+          <div
+            style={{
+              width: "37px",
+              height: "37px",
+              borderRadius: "50%",
+              background: "#334155",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "17px",
+              border:
+                "2px solid #475569",
+            }}
+          >
+            👨‍🏫
+          </div>
+
+          <div>
+            <div
+              style={{
+                color: "#ffffff",
+                fontSize: "12px",
+                fontWeight: "700",
+              }}
+            >
+              Teacher
+            </div>
+
+            <div
+              style={{
+                color: "#94a3b8",
+                fontSize: "9px",
+                marginTop: "2px",
+              }}
+            >
+              Administrator
+            </div>
+          </div>
+
+        </div>
+
+      </header>
+
+      {/* ==========================================
+          HEADER
+      ========================================== */}
       <div className="monitor-header">
 
         <div>
@@ -733,7 +991,9 @@ function Monitoring() {
 
       </div>
 
-      {/* CAMERA */}
+      {/* ==========================================
+          CAMERA
+      ========================================== */}
       <div className="camera-card">
 
         <div className="card-title">
@@ -816,7 +1076,9 @@ function Monitoring() {
 
       </div>
 
-      {/* AI STATUS */}
+      {/* ==========================================
+          AI STATUS
+      ========================================== */}
       <div className="ai-monitor-status">
 
         <h2>
@@ -877,7 +1139,9 @@ function Monitoring() {
 
       </div>
 
-      {/* CLASSROOM OVERVIEW */}
+      {/* ==========================================
+          CLASSROOM OVERVIEW
+      ========================================== */}
       <div className="ai-monitor-status">
 
         <h2>
@@ -947,7 +1211,9 @@ function Monitoring() {
 
       </div>
 
-      {/* IDENTIFIED STUDENTS */}
+      {/* ==========================================
+          IDENTIFIED STUDENTS
+      ========================================== */}
       <div className="ai-monitor-status">
 
         <h2>

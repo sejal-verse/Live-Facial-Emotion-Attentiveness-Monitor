@@ -20,11 +20,19 @@ function StudentDashboard() {
       return;
     }
 
-    const studentData = JSON.parse(savedStudent);
-    setStudent(studentData);
+    try {
+      const studentData = JSON.parse(savedStudent);
 
-    loadAttendance(studentData);
-    loadLiveData();
+      setStudent(studentData);
+
+      loadAttendance(studentData);
+      loadLiveData();
+    } catch (error) {
+      console.error("Error loading student data:", error);
+
+      localStorage.removeItem("loggedInStudent");
+      navigate("/student-login");
+    }
   }, [navigate]);
 
   // ==================================================
@@ -51,15 +59,20 @@ function StudentDashboard() {
       "liveMonitoringData"
     );
 
-    if (savedLiveData) {
-      try {
-        setLiveData(JSON.parse(savedLiveData));
-      } catch (error) {
-        console.error(
-          "Error loading live monitoring data:",
-          error
-        );
-      }
+    if (!savedLiveData) {
+      setLiveData(null);
+      return;
+    }
+
+    try {
+      setLiveData(JSON.parse(savedLiveData));
+    } catch (error) {
+      console.error(
+        "Error loading live monitoring data:",
+        error
+      );
+
+      setLiveData(null);
     }
   };
 
@@ -100,7 +113,212 @@ function StudentDashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem("loggedInStudent");
+
     navigate("/student-login");
+  };
+
+  // ==================================================
+  // DELETE MY PROFILE
+  // ==================================================
+
+  const handleDeleteProfile = () => {
+    if (!student) return;
+
+    const confirmDelete = window.confirm(
+      "Are you sure you want to permanently delete your student profile?\n\n" +
+        "Your registered profile and login session will be removed.\n\n" +
+        "This action cannot be undone."
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      // ==================================================
+      // 1. GET REGISTERED STUDENTS
+      // ==================================================
+
+      const registeredStudents = JSON.parse(
+        localStorage.getItem("registeredStudents") || "[]"
+      );
+
+      // ==================================================
+      // 2. REMOVE CURRENT STUDENT
+      // ==================================================
+
+      const updatedStudents = registeredStudents.filter(
+        (registeredStudent) =>
+          registeredStudent.id !== student.id
+      );
+
+      localStorage.setItem(
+        "registeredStudents",
+        JSON.stringify(updatedStudents)
+      );
+
+      // ==================================================
+      // 3. REMOVE LOGIN SESSION
+      // ==================================================
+
+      localStorage.removeItem("loggedInStudent");
+
+      // ==================================================
+      // 4. REMOVE ATTENDANCE SAFELY
+      // ==================================================
+
+      const savedAttendance = JSON.parse(
+        localStorage.getItem("classAttendance") || "{}"
+      );
+
+      /*
+        Attendance is currently stored using student NAME
+        as the key.
+
+        Therefore, only remove attendance by name if
+        there is no other registered student with the
+        same name.
+      */
+
+      const sameNameStudentExists =
+        updatedStudents.some(
+          (registeredStudent) =>
+            registeredStudent.name?.trim().toLowerCase() ===
+            student.name?.trim().toLowerCase()
+        );
+
+      if (!sameNameStudentExists) {
+        Object.keys(savedAttendance).forEach((date) => {
+          if (
+            savedAttendance[date] &&
+            savedAttendance[date][student.name]
+          ) {
+            delete savedAttendance[date][student.name];
+          }
+        });
+
+        localStorage.setItem(
+          "classAttendance",
+          JSON.stringify(savedAttendance)
+        );
+      }
+
+      // ==================================================
+      // 5. REMOVE FROM LIVE MONITORING DATA
+      // ==================================================
+
+      const savedLiveData = localStorage.getItem(
+        "liveMonitoringData"
+      );
+
+      if (savedLiveData) {
+        try {
+          const currentLiveData =
+            JSON.parse(savedLiveData);
+
+          const studentId = student.id;
+
+          // Remove from studentPerformance
+          if (
+            Array.isArray(
+              currentLiveData.studentPerformance
+            )
+          ) {
+            currentLiveData.studentPerformance =
+              currentLiveData.studentPerformance.filter(
+                (item) => {
+                  if (
+                    studentId &&
+                    item.id &&
+                    item.id === studentId
+                  ) {
+                    return false;
+                  }
+
+                  return (
+                    item.name?.trim().toLowerCase() !==
+                    student.name?.trim().toLowerCase()
+                  );
+                }
+              );
+          }
+
+          // Remove from students list
+          if (
+            Array.isArray(currentLiveData.students)
+          ) {
+            currentLiveData.students =
+              currentLiveData.students.filter(
+                (item) => {
+                  if (
+                    studentId &&
+                    item.id &&
+                    item.id === studentId
+                  ) {
+                    return false;
+                  }
+
+                  return (
+                    item.name?.trim().toLowerCase() !==
+                    student.name?.trim().toLowerCase()
+                  );
+                }
+              );
+          }
+
+          // Update student count
+          if (
+            Array.isArray(currentLiveData.students)
+          ) {
+            currentLiveData.studentsPresent =
+              currentLiveData.students.filter(
+                (item) => item.recognized
+              ).length;
+          }
+
+          currentLiveData.updatedAt = Date.now();
+
+          localStorage.setItem(
+            "liveMonitoringData",
+            JSON.stringify(currentLiveData)
+          );
+        } catch (error) {
+          console.error(
+            "Error updating live monitoring data:",
+            error
+          );
+        }
+      }
+
+      // ==================================================
+      // 6. CLEAR STATE
+      // ==================================================
+
+      setStudent(null);
+      setAttendance([]);
+      setLiveData(null);
+
+      // ==================================================
+      // 7. SUCCESS MESSAGE
+      // ==================================================
+
+      alert(
+        "Your student profile has been deleted successfully."
+      );
+
+      // ==================================================
+      // 8. RETURN TO LOGIN
+      // ==================================================
+
+      navigate("/student-login");
+    } catch (error) {
+      console.error(
+        "Error deleting student profile:",
+        error
+      );
+
+      alert(
+        "Unable to delete your profile. Please try again."
+      );
+    }
   };
 
   // ==================================================
@@ -110,11 +328,13 @@ function StudentDashboard() {
   const totalClasses = attendance.length;
 
   const presentClasses = attendance.filter(
-    (item) => item.status === "Present"
+    (item) =>
+      item.status?.toLowerCase() === "present"
   ).length;
 
   const absentClasses = attendance.filter(
-    (item) => item.status === "Absent"
+    (item) =>
+      item.status?.toLowerCase() === "absent"
   ).length;
 
   const attendancePercentage =
@@ -131,25 +351,57 @@ function StudentDashboard() {
   let studentLiveData = null;
 
   if (liveData && student) {
-    if (liveData.studentPerformance) {
+    const performanceList =
+      Array.isArray(liveData.studentPerformance)
+        ? liveData.studentPerformance
+        : [];
+
+    // First try matching by ID
+    if (student.id) {
       studentLiveData =
-        liveData.studentPerformance.find(
+        performanceList.find(
           (item) =>
-            item.name?.toLowerCase() ===
-            student.name?.toLowerCase()
+            item.id &&
+            item.id === student.id
+        );
+    }
+
+    // If ID is unavailable, match by name
+    if (!studentLiveData) {
+      studentLiveData =
+        performanceList.find(
+          (item) =>
+            item.name?.trim().toLowerCase() ===
+            student.name?.trim().toLowerCase()
         );
     }
   }
 
-  const attention =
-    studentLiveData?.attention ??
-    student?.attention ??
-    0;
+  // ==================================================
+  // LIVE PERFORMANCE VALUES
+  // ==================================================
 
-  const emotion =
+  const attention = Math.round(
+    Number(
+      studentLiveData?.attentionScore ??
+        studentLiveData?.attention ??
+        student?.attention ??
+        0
+    )
+  );
+
+  const rawEmotion =
     studentLiveData?.emotion ??
     student?.emotion ??
     "Not Available";
+
+  const emotion =
+    rawEmotion !== "Not Available"
+      ? String(rawEmotion)
+          .charAt(0)
+          .toUpperCase() +
+        String(rawEmotion).slice(1).toLowerCase()
+      : "Not Available";
 
   const distraction =
     studentLiveData?.distraction ??
@@ -157,7 +409,7 @@ function StudentDashboard() {
     "Not Available";
 
   const monitoringActive =
-    liveData?.monitoringActive || false;
+    liveData?.monitoringActive === true;
 
   // ==================================================
   // LOADING
@@ -203,6 +455,7 @@ function StudentDashboard() {
         </div>
 
         {/* STUDENT PROFILE */}
+
         <div style={styles.profileBox}>
 
           {student.photo ? (
@@ -234,6 +487,7 @@ function StudentDashboard() {
         </div>
 
         {/* NAVIGATION */}
+
         <nav style={styles.nav}>
 
           <div style={styles.navTitle}>
@@ -274,6 +528,7 @@ function StudentDashboard() {
         </nav>
 
         {/* LOGOUT */}
+
         <button
           onClick={handleLogout}
           style={styles.logoutButton}
@@ -290,6 +545,7 @@ function StudentDashboard() {
       <main style={styles.main}>
 
         {/* HEADER */}
+
         <header style={styles.header}>
 
           <div>
@@ -331,6 +587,7 @@ function StudentDashboard() {
         >
 
           {/* ATTENDANCE */}
+
           <div style={styles.statCard}>
 
             <div
@@ -343,6 +600,7 @@ function StudentDashboard() {
             </div>
 
             <div>
+
               <p style={styles.statLabel}>
                 My Attendance
               </p>
@@ -352,13 +610,15 @@ function StudentDashboard() {
               </h2>
 
               <p style={styles.statSmall}>
-                {presentClasses} present classes
+                {presentClasses} present / {totalClasses} classes
               </p>
+
             </div>
 
           </div>
 
           {/* ATTENTION */}
+
           <div style={styles.statCard}>
 
             <div
@@ -371,6 +631,7 @@ function StudentDashboard() {
             </div>
 
             <div>
+
               <p style={styles.statLabel}>
                 Attention Score
               </p>
@@ -382,11 +643,13 @@ function StudentDashboard() {
               <p style={styles.statSmall}>
                 During monitoring
               </p>
+
             </div>
 
           </div>
 
           {/* EMOTION */}
+
           <div style={styles.statCard}>
 
             <div
@@ -399,6 +662,7 @@ function StudentDashboard() {
             </div>
 
             <div>
+
               <p style={styles.statLabel}>
                 Current Emotion
               </p>
@@ -410,11 +674,13 @@ function StudentDashboard() {
               <p style={styles.statSmall}>
                 AI detected
               </p>
+
             </div>
 
           </div>
 
           {/* DISTRACTION */}
+
           <div style={styles.statCard}>
 
             <div
@@ -427,6 +693,7 @@ function StudentDashboard() {
             </div>
 
             <div>
+
               <p style={styles.statLabel}>
                 Distraction
               </p>
@@ -438,6 +705,7 @@ function StudentDashboard() {
               <p style={styles.statSmall}>
                 Current status
               </p>
+
             </div>
 
           </div>
@@ -454,11 +722,13 @@ function StudentDashboard() {
         >
 
           {/* PROFILE */}
+
           <div style={styles.card}>
 
             <div style={styles.cardHeader}>
 
               <div>
+
                 <h2 style={styles.cardTitle}>
                   👤 My Details
                 </h2>
@@ -466,6 +736,7 @@ function StudentDashboard() {
                 <p style={styles.cardSubtitle}>
                   Your registered student information
                 </p>
+
               </div>
 
             </div>
@@ -544,14 +815,42 @@ function StudentDashboard() {
 
             </div>
 
+            {/* DELETE PROFILE */}
+
+            <div style={styles.deleteSection}>
+
+              <div>
+
+                <h3 style={styles.deleteTitle}>
+                  Delete My Profile
+                </h3>
+
+                <p style={styles.deleteText}>
+                  Permanently remove your registered
+                  student account and attendance data.
+                </p>
+
+              </div>
+
+              <button
+                onClick={handleDeleteProfile}
+                style={styles.deleteButton}
+              >
+                🗑️ Delete My Profile
+              </button>
+
+            </div>
+
           </div>
 
           {/* AI PERFORMANCE */}
+
           <div style={styles.card}>
 
             <div style={styles.cardHeader}>
 
               <div>
+
                 <h2 style={styles.cardTitle}>
                   🤖 AI Class Performance
                 </h2>
@@ -559,11 +858,13 @@ function StudentDashboard() {
                 <p style={styles.cardSubtitle}>
                   Your latest classroom analysis
                 </p>
+
               </div>
 
             </div>
 
             {/* ATTENTION */}
+
             <div style={styles.performanceItem}>
 
               <div style={styles.performanceTop}>
@@ -584,7 +885,7 @@ function StudentDashboard() {
                   style={{
                     ...styles.progressBar,
                     width: `${Math.min(
-                      Number(attention) || 0,
+                      Math.max(attention, 0),
                       100
                     )}%`,
                   }}
@@ -595,6 +896,7 @@ function StudentDashboard() {
             </div>
 
             {/* ATTENDANCE */}
+
             <div style={styles.performanceItem}>
 
               <div style={styles.performanceTop}>
@@ -623,6 +925,7 @@ function StudentDashboard() {
             </div>
 
             {/* EMOTION */}
+
             <div style={styles.aiBox}>
 
               <span style={styles.aiEmoji}>
@@ -630,6 +933,7 @@ function StudentDashboard() {
               </span>
 
               <div>
+
                 <strong>
                   Current Emotion
                 </strong>
@@ -637,11 +941,13 @@ function StudentDashboard() {
                 <p style={styles.aiText}>
                   {emotion}
                 </p>
+
               </div>
 
             </div>
 
             {/* DISTRACTION */}
+
             <div style={styles.aiBox}>
 
               <span style={styles.aiEmoji}>
@@ -649,6 +955,7 @@ function StudentDashboard() {
               </span>
 
               <div>
+
                 <strong>
                   Distraction Status
                 </strong>
@@ -656,6 +963,7 @@ function StudentDashboard() {
                 <p style={styles.aiText}>
                   {distraction}
                 </p>
+
               </div>
 
             </div>
@@ -676,6 +984,7 @@ function StudentDashboard() {
           <div style={styles.cardHeader}>
 
             <div>
+
               <h2 style={styles.cardTitle}>
                 📅 My Attendance History
               </h2>
@@ -683,6 +992,7 @@ function StudentDashboard() {
               <p style={styles.cardSubtitle}>
                 Your recorded classroom attendance
               </p>
+
             </div>
 
             <div style={styles.attendanceSummary}>
@@ -744,15 +1054,15 @@ function StudentDashboard() {
 
                           <span
                             style={
-                              record.status ===
-                              "Present"
+                              record.status?.toLowerCase() ===
+                              "present"
                                 ? styles.presentBadge
                                 : styles.absentBadge
                             }
                           >
 
-                            {record.status ===
-                            "Present"
+                            {record.status?.toLowerCase() ===
+                            "present"
                               ? "✓ Present"
                               : "✕ Absent"}
 
@@ -802,6 +1112,7 @@ function StudentDashboard() {
         </section>
 
         {/* FOOTER */}
+
         <footer style={styles.footer}>
           🤖 AI Smart Classroom • Student Dashboard
         </footer>
@@ -1124,6 +1435,47 @@ const styles = {
   activeBadge: {
     color: "#059669",
     fontWeight: "700",
+  },
+
+  deleteSection: {
+    marginTop: "20px",
+    padding: "16px",
+    borderRadius: "12px",
+    background: "#fff7f7",
+    border: "1px solid #fecaca",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "15px",
+  },
+
+  deleteTitle: {
+    margin: 0,
+    color: "#991b1b",
+    fontSize: "13px",
+    fontWeight: "800",
+  },
+
+  deleteText: {
+    margin: "5px 0 0",
+    color: "#7f1d1d",
+    fontSize: "10px",
+    lineHeight: "1.5",
+    maxWidth: "330px",
+  },
+
+  deleteButton: {
+    flexShrink: 0,
+    background: "#dc2626",
+    color: "white",
+    border: "none",
+    padding: "10px 14px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontSize: "11px",
+    fontWeight: "700",
+    boxShadow:
+      "0 4px 10px rgba(220, 38, 38, 0.20)",
   },
 
   performanceItem: {
