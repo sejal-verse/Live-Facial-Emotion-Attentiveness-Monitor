@@ -1,70 +1,198 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 function Login() {
   const navigate = useNavigate();
 
+  const [isSignup, setIsSignup] = useState(false);
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // =====================================================
+  // TEACHER LOGIN
+  // =====================================================
 
   const handleLogin = (e) => {
     e.preventDefault();
 
-    if (!name.trim() || !email.trim() || !password.trim()) {
+    if (!email.trim() || !password.trim()) {
+      alert("Please enter your email and password.");
+      return;
+    }
+
+    const savedTeachers =
+      JSON.parse(localStorage.getItem("teachers")) || [];
+
+    const teacher = savedTeachers.find(
+      (item) =>
+        item.email.toLowerCase() === email.trim().toLowerCase() &&
+        item.password === password
+    );
+
+    if (!teacher) {
+      alert(
+        "Teacher account not found or password is incorrect. Please sign up first."
+      );
+      return;
+    }
+
+    localStorage.setItem("teacherName", teacher.name);
+    localStorage.setItem("loggedInTeacher", JSON.stringify(teacher));
+
+    alert("Login successful!");
+
+    navigate("/dashboard");
+  };
+
+  // =====================================================
+  // TEACHER SIGN UP
+  // =====================================================
+
+  const handleSignup = (e) => {
+    e.preventDefault();
+
+    if (
+      !name.trim() ||
+      !email.trim() ||
+      !password.trim() ||
+      !confirmPassword.trim()
+    ) {
       alert("Please fill in all fields.");
       return;
     }
 
-    // Save teacher name for the dashboard
-    localStorage.setItem("teacherName", name);
+    if (password !== confirmPassword) {
+      alert("Passwords do not match.");
+      return;
+    }
 
-    // Go to Teacher Dashboard
+    if (password.length < 6) {
+      alert("Password must be at least 6 characters.");
+      return;
+    }
+
+    const savedTeachers =
+      JSON.parse(localStorage.getItem("teachers")) || [];
+
+    const existingTeacher = savedTeachers.find(
+      (item) =>
+        item.email.toLowerCase() === email.trim().toLowerCase()
+    );
+
+    if (existingTeacher) {
+      alert(
+        "An account with this email already exists. Please login."
+      );
+
+      setIsSignup(false);
+      return;
+    }
+
+    const newTeacher = {
+      id: Date.now(),
+      name: name.trim(),
+      email: email.trim(),
+      password,
+      registeredAt: new Date().toISOString(),
+    };
+
+    savedTeachers.push(newTeacher);
+
+    localStorage.setItem(
+      "teachers",
+      JSON.stringify(savedTeachers)
+    );
+
+    localStorage.setItem(
+      "teacherName",
+      newTeacher.name
+    );
+
+    localStorage.setItem(
+      "loggedInTeacher",
+      JSON.stringify(newTeacher)
+    );
+
+    alert("Teacher account created successfully!");
+
     navigate("/dashboard");
+  };
+
+  // =====================================================
+  // SWITCH LOGIN / SIGN UP
+  // =====================================================
+
+  const switchMode = () => {
+    setIsSignup(!isSignup);
+
+    setName("");
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   return (
     <div style={styles.page}>
-
       <div style={styles.card}>
 
-        {/* Logo */}
+        {/* LOGO */}
         <div style={styles.logo}>
-          🤖
+          👨‍🏫
         </div>
 
-        {/* Heading */}
+        {/* HEADING */}
         <h1 style={styles.title}>
-          Login to AI Smart Classroom
+          {isSignup
+            ? "Create Teacher Account"
+            : "Teacher Login"}
         </h1>
 
         <p style={styles.subtitle}>
-          Enter your details to continue
+          {isSignup
+            ? "Create your account to manage your classroom"
+            : "Login to access your AI Smart Classroom"}
         </p>
 
-        <form onSubmit={handleLogin}>
+        <form
+          onSubmit={
+            isSignup
+              ? handleSignup
+              : handleLogin
+          }
+        >
 
-          {/* NAME */}
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>
-              Name
-            </label>
+          {/* NAME - ONLY FOR SIGN UP */}
+          {isSignup && (
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>
+                Name
+              </label>
 
-            <div style={styles.inputWrapper}>
-              <span style={styles.inputIcon}>
-                👤
-              </span>
+              <div style={styles.inputWrapper}>
+                <span style={styles.inputIcon}>
+                  👤
+                </span>
 
-              <input
-                type="text"
-                placeholder="Enter your name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                style={styles.input}
-              />
+                <input
+                  type="text"
+                  placeholder="Enter your name"
+                  value={name}
+                  onChange={(e) =>
+                    setName(e.target.value)
+                  }
+                  style={styles.input}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* EMAIL */}
           <div style={styles.inputGroup}>
@@ -81,7 +209,9 @@ function Login() {
                 type="email"
                 placeholder="Enter your email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) =>
+                  setEmail(e.target.value)
+                }
                 style={styles.input}
               />
             </div>
@@ -99,10 +229,16 @@ function Login() {
               </span>
 
               <input
-                type={showPassword ? "text" : "password"}
+                type={
+                  showPassword
+                    ? "text"
+                    : "password"
+                }
                 placeholder="Enter your password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) =>
+                  setPassword(e.target.value)
+                }
                 style={styles.input}
               />
 
@@ -113,51 +249,109 @@ function Login() {
                 }
                 style={styles.showButton}
               >
-                {showPassword ? "Hide" : "Show"}
+                {showPassword
+                  ? "Hide"
+                  : "Show"}
               </button>
             </div>
           </div>
 
-          {/* REMEMBER + FORGOT PASSWORD */}
-          <div style={styles.options}>
+          {/* CONFIRM PASSWORD - ONLY FOR SIGN UP */}
+          {isSignup && (
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>
+                Confirm Password
+              </label>
 
-            <label style={styles.remember}>
-              <input type="checkbox" />
-              <span>Remember me</span>
-            </label>
+              <div style={styles.inputWrapper}>
+                <span style={styles.inputIcon}>
+                  🔐
+                </span>
 
-            <button
-              type="button"
-              style={styles.forgot}
-              onClick={() =>
-                alert("Password reset feature coming soon.")
-              }
-            >
-              Forgot Password?
-            </button>
+                <input
+                  type={
+                    showConfirmPassword
+                      ? "text"
+                      : "password"
+                  }
+                  placeholder="Confirm your password"
+                  value={confirmPassword}
+                  onChange={(e) =>
+                    setConfirmPassword(
+                      e.target.value
+                    )
+                  }
+                  style={styles.input}
+                />
 
-          </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowConfirmPassword(
+                      !showConfirmPassword
+                    )
+                  }
+                  style={styles.showButton}
+                >
+                  {showConfirmPassword
+                    ? "Hide"
+                    : "Show"}
+                </button>
+              </div>
+            </div>
+          )}
 
-          {/* LOGIN BUTTON */}
+          {/* LOGIN OPTIONS */}
+          {!isSignup && (
+            <div style={styles.options}>
+
+              <label style={styles.remember}>
+                <input type="checkbox" />
+                <span>Remember me</span>
+              </label>
+
+              <button
+                type="button"
+                style={styles.forgot}
+                onClick={() =>
+                  alert(
+                    "Password reset feature coming soon."
+                  )
+                }
+              >
+                Forgot Password?
+              </button>
+
+            </div>
+          )}
+
+          {/* MAIN BUTTON */}
           <button
             type="submit"
             style={styles.loginButton}
           >
-            Login →
+            {isSignup
+              ? "Create Account →"
+              : "Login →"}
           </button>
 
         </form>
 
-        {/* REGISTER */}
+        {/* SWITCH LOGIN / SIGNUP */}
         <p style={styles.registerText}>
-          Don't have an account?{" "}
+          {isSignup
+            ? "Already have an account?"
+            : "Don't have an account?"}
 
-          <Link
-            to="/students"
-            style={styles.registerLink}
+          <button
+            type="button"
+            onClick={switchMode}
+            style={styles.registerButton}
           >
-            Register
-          </Link>
+            {isSignup
+              ? "Login"
+              : "Sign Up"}
+          </button>
         </p>
 
         {/* FOOTER */}
@@ -179,10 +373,15 @@ const styles = {
 
   page: {
     minHeight: "100vh",
+
     display: "flex",
+
     justifyContent: "center",
+
     alignItems: "center",
+
     padding: "20px",
+
     boxSizing: "border-box",
 
     background:
@@ -194,6 +393,7 @@ const styles = {
 
   card: {
     width: "100%",
+
     maxWidth: "430px",
 
     backgroundColor: "#ffffff",
@@ -210,6 +410,7 @@ const styles = {
 
   logo: {
     width: "65px",
+
     height: "65px",
 
     margin: "0 auto 18px",
@@ -220,7 +421,9 @@ const styles = {
       "linear-gradient(135deg, #2563eb, #7c3aed)",
 
     display: "flex",
+
     justifyContent: "center",
+
     alignItems: "center",
 
     fontSize: "32px",
@@ -397,12 +600,22 @@ const styles = {
     fontSize: "12px",
   },
 
-  registerLink: {
+  registerButton: {
+    border: "none",
+
+    background: "none",
+
     color: "#2563eb",
 
     fontWeight: "700",
 
-    textDecoration: "none",
+    cursor: "pointer",
+
+    fontSize: "12px",
+
+    marginLeft: "5px",
+
+    padding: 0,
   },
 
   footer: {

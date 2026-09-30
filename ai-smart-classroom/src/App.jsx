@@ -24,6 +24,12 @@ import Monitoring from "./pages/Monitoring";
 import Analytics from "./pages/Analytics";
 import Reports from "./pages/Reports";
 
+// Create Class
+import CreateClass from "./pages/CreateClass";
+
+// Online Classroom
+import Classroom from "./pages/Classroom";
+
 function App() {
   return (
     <BrowserRouter>
@@ -87,6 +93,24 @@ function App() {
         <Route
           path="/students"
           element={<StudentRegistration />}
+        />
+
+        {/* ============================= */}
+        {/* CREATE CLASS */}
+        {/* ============================= */}
+
+        <Route
+          path="/create-class"
+          element={<CreateClass />}
+        />
+
+        {/* ============================= */}
+        {/* ONLINE CLASSROOM */}
+        {/* ============================= */}
+
+        <Route
+          path="/classroom/:classId"
+          element={<Classroom />}
         />
 
         {/* ============================= */}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 function StudentDashboard() {
   const navigate = useNavigate();
@@ -8,12 +8,16 @@ function StudentDashboard() {
   const [attendance, setAttendance] = useState([]);
   const [liveData, setLiveData] = useState(null);
 
+  // Current section
+  const [activeSection, setActiveSection] = useState("dashboard");
+
   // ==================================================
   // LOAD STUDENT DATA
   // ==================================================
 
   useEffect(() => {
-    const savedStudent = localStorage.getItem("loggedInStudent");
+    const savedStudent =
+      localStorage.getItem("loggedInStudent");
 
     if (!savedStudent) {
       navigate("/student-login");
@@ -28,7 +32,10 @@ function StudentDashboard() {
       loadAttendance(studentData);
       loadLiveData();
     } catch (error) {
-      console.error("Error loading student data:", error);
+      console.error(
+        "Error loading student data:",
+        error
+      );
 
       localStorage.removeItem("loggedInStudent");
       navigate("/student-login");
@@ -36,7 +43,7 @@ function StudentDashboard() {
   }, [navigate]);
 
   // ==================================================
-  // REFRESH LIVE DATA + ATTENDANCE
+  // REFRESH DATA EVERY SECOND
   // ==================================================
 
   useEffect(() => {
@@ -51,13 +58,12 @@ function StudentDashboard() {
   }, [student]);
 
   // ==================================================
-  // LOAD LIVE MONITORING DATA
+  // LOAD LIVE DATA
   // ==================================================
 
   const loadLiveData = () => {
-    const savedLiveData = localStorage.getItem(
-      "liveMonitoringData"
-    );
+    const savedLiveData =
+      localStorage.getItem("liveMonitoringData");
 
     if (!savedLiveData) {
       setLiveData(null);
@@ -118,7 +124,7 @@ function StudentDashboard() {
   };
 
   // ==================================================
-  // DELETE MY PROFILE
+  // DELETE PROFILE
   // ==================================================
 
   const handleDeleteProfile = () => {
@@ -133,67 +139,54 @@ function StudentDashboard() {
     if (!confirmDelete) return;
 
     try {
-      // ==================================================
-      // 1. GET REGISTERED STUDENTS
-      // ==================================================
-
+      // Remove from registered students
       const registeredStudents = JSON.parse(
-        localStorage.getItem("registeredStudents") || "[]"
+        localStorage.getItem("registeredStudents") ||
+          "[]"
       );
 
-      // ==================================================
-      // 2. REMOVE CURRENT STUDENT
-      // ==================================================
-
-      const updatedStudents = registeredStudents.filter(
-        (registeredStudent) =>
-          registeredStudent.id !== student.id
-      );
+      const updatedStudents =
+        registeredStudents.filter(
+          (registeredStudent) =>
+            registeredStudent.id !== student.id
+        );
 
       localStorage.setItem(
         "registeredStudents",
         JSON.stringify(updatedStudents)
       );
 
-      // ==================================================
-      // 3. REMOVE LOGIN SESSION
-      // ==================================================
-
+      // Remove login session
       localStorage.removeItem("loggedInStudent");
 
-      // ==================================================
-      // 4. REMOVE ATTENDANCE SAFELY
-      // ==================================================
-
+      // Remove attendance safely
       const savedAttendance = JSON.parse(
-        localStorage.getItem("classAttendance") || "{}"
+        localStorage.getItem("classAttendance") ||
+          "{}"
       );
-
-      /*
-        Attendance is currently stored using student NAME
-        as the key.
-
-        Therefore, only remove attendance by name if
-        there is no other registered student with the
-        same name.
-      */
 
       const sameNameStudentExists =
         updatedStudents.some(
           (registeredStudent) =>
-            registeredStudent.name?.trim().toLowerCase() ===
+            registeredStudent.name
+              ?.trim()
+              .toLowerCase() ===
             student.name?.trim().toLowerCase()
         );
 
       if (!sameNameStudentExists) {
-        Object.keys(savedAttendance).forEach((date) => {
-          if (
-            savedAttendance[date] &&
-            savedAttendance[date][student.name]
-          ) {
-            delete savedAttendance[date][student.name];
+        Object.keys(savedAttendance).forEach(
+          (date) => {
+            if (
+              savedAttendance[date] &&
+              savedAttendance[date][student.name]
+            ) {
+              delete savedAttendance[date][
+                student.name
+              ];
+            }
           }
-        });
+        );
 
         localStorage.setItem(
           "classAttendance",
@@ -201,10 +194,7 @@ function StudentDashboard() {
         );
       }
 
-      // ==================================================
-      // 5. REMOVE FROM LIVE MONITORING DATA
-      // ==================================================
-
+      // Remove from live monitoring data
       const savedLiveData = localStorage.getItem(
         "liveMonitoringData"
       );
@@ -216,7 +206,6 @@ function StudentDashboard() {
 
           const studentId = student.id;
 
-          // Remove from studentPerformance
           if (
             Array.isArray(
               currentLiveData.studentPerformance
@@ -234,14 +223,17 @@ function StudentDashboard() {
                   }
 
                   return (
-                    item.name?.trim().toLowerCase() !==
-                    student.name?.trim().toLowerCase()
+                    item.name
+                      ?.trim()
+                      .toLowerCase() !==
+                    student.name
+                      ?.trim()
+                      .toLowerCase()
                   );
                 }
               );
           }
 
-          // Remove from students list
           if (
             Array.isArray(currentLiveData.students)
           ) {
@@ -257,17 +249,16 @@ function StudentDashboard() {
                   }
 
                   return (
-                    item.name?.trim().toLowerCase() !==
-                    student.name?.trim().toLowerCase()
+                    item.name
+                      ?.trim()
+                      .toLowerCase() !==
+                    student.name
+                      ?.trim()
+                      .toLowerCase()
                   );
                 }
               );
-          }
 
-          // Update student count
-          if (
-            Array.isArray(currentLiveData.students)
-          ) {
             currentLiveData.studentsPresent =
               currentLiveData.students.filter(
                 (item) => item.recognized
@@ -288,25 +279,13 @@ function StudentDashboard() {
         }
       }
 
-      // ==================================================
-      // 6. CLEAR STATE
-      // ==================================================
-
       setStudent(null);
       setAttendance([]);
       setLiveData(null);
 
-      // ==================================================
-      // 7. SUCCESS MESSAGE
-      // ==================================================
-
       alert(
         "Your student profile has been deleted successfully."
       );
-
-      // ==================================================
-      // 8. RETURN TO LOGIN
-      // ==================================================
 
       navigate("/student-login");
     } catch (error) {
@@ -322,7 +301,7 @@ function StudentDashboard() {
   };
 
   // ==================================================
-  // CALCULATE ATTENDANCE
+  // ATTENDANCE CALCULATIONS
   // ==================================================
 
   const totalClasses = attendance.length;
@@ -345,7 +324,7 @@ function StudentDashboard() {
       : 0;
 
   // ==================================================
-  // GET STUDENT LIVE DATA
+  // FIND CURRENT STUDENT LIVE DATA
   // ==================================================
 
   let studentLiveData = null;
@@ -356,7 +335,7 @@ function StudentDashboard() {
         ? liveData.studentPerformance
         : [];
 
-    // First try matching by ID
+    // Match by ID first
     if (student.id) {
       studentLiveData =
         performanceList.find(
@@ -366,13 +345,17 @@ function StudentDashboard() {
         );
     }
 
-    // If ID is unavailable, match by name
+    // Match by name if ID is unavailable
     if (!studentLiveData) {
       studentLiveData =
         performanceList.find(
           (item) =>
-            item.name?.trim().toLowerCase() ===
-            student.name?.trim().toLowerCase()
+            item.name
+              ?.trim()
+              .toLowerCase() ===
+            student.name
+              ?.trim()
+              .toLowerCase()
         );
     }
   }
@@ -400,7 +383,9 @@ function StudentDashboard() {
       ? String(rawEmotion)
           .charAt(0)
           .toUpperCase() +
-        String(rawEmotion).slice(1).toLowerCase()
+        String(rawEmotion)
+          .slice(1)
+          .toLowerCase()
       : "Not Available";
 
   const distraction =
@@ -410,6 +395,20 @@ function StudentDashboard() {
 
   const monitoringActive =
     liveData?.monitoringActive === true;
+
+  // ==================================================
+  // NAVIGATION
+  // ==================================================
+
+  const selectSection = (section) => {
+    setActiveSection(section);
+
+    // Scroll to top when changing section
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
 
   // ==================================================
   // LOADING
@@ -424,701 +423,982 @@ function StudentDashboard() {
   }
 
   // ==================================================
-  // DASHBOARD
+  // SIDEBAR
+  // ==================================================
+
+  const Sidebar = () => (
+    <aside style={styles.sidebar}>
+      {/* LOGO */}
+
+      <div style={styles.logoSection}>
+        <div style={styles.logoIcon}>
+          🤖
+        </div>
+
+        <div>
+          <div style={styles.logoTitle}>
+            AI CLASSROOM
+          </div>
+
+          <div style={styles.logoSubtitle}>
+            Student Portal
+          </div>
+        </div>
+      </div>
+
+      {/* STUDENT PROFILE */}
+
+      <div style={styles.profileBox}>
+        {student.photo ? (
+          <img
+            src={student.photo}
+            alt="Student"
+            style={styles.profileImage}
+          />
+        ) : (
+          <div style={styles.profileInitial}>
+            {student.name
+              ?.charAt(0)
+              ?.toUpperCase()}
+          </div>
+        )}
+
+        <div style={styles.profileInfo}>
+          <strong style={styles.profileName}>
+            {student.name}
+          </strong>
+
+          <span style={styles.profileRole}>
+            Student
+          </span>
+        </div>
+      </div>
+
+      {/* NAVIGATION */}
+
+      <nav style={styles.nav}>
+        <div style={styles.navTitle}>
+          MY CLASSROOM
+        </div>
+
+        <button
+          onClick={() =>
+            selectSection("dashboard")
+          }
+          style={{
+            ...styles.navItem,
+            ...(activeSection === "dashboard"
+              ? styles.activeNav
+              : {}),
+          }}
+        >
+          🏠 Dashboard
+        </button>
+
+        <button
+          onClick={() =>
+            selectSection("profile")
+          }
+          style={{
+            ...styles.navItem,
+            ...(activeSection === "profile"
+              ? styles.activeNav
+              : {}),
+          }}
+        >
+          👤 My Profile
+        </button>
+
+        <button
+          onClick={() =>
+            selectSection("attendance")
+          }
+          style={{
+            ...styles.navItem,
+            ...(activeSection === "attendance"
+              ? styles.activeNav
+              : {}),
+          }}
+        >
+          📋 My Attendance
+        </button>
+
+        <button
+          onClick={() =>
+            selectSection("performance")
+          }
+          style={{
+            ...styles.navItem,
+            ...(activeSection === "performance"
+              ? styles.activeNav
+              : {}),
+          }}
+        >
+          📊 My Performance
+        </button>
+      </nav>
+
+      {/* LOGOUT */}
+
+      <button
+        onClick={handleLogout}
+        style={styles.logoutButton}
+      >
+        🚪 Logout
+      </button>
+    </aside>
+  );
+
+  // ==================================================
+  // HEADER
+  // ==================================================
+
+  const Header = ({
+    title,
+    subtitle,
+  }) => (
+    <header style={styles.header}>
+      <div>
+        <h1 style={styles.heading}>
+          {title}
+        </h1>
+
+        <p style={styles.welcome}>
+          {subtitle}
+        </p>
+      </div>
+
+      <div style={styles.classStatus}>
+        <span
+          style={{
+            ...styles.statusDot,
+            backgroundColor: monitoringActive
+              ? "#22c55e"
+              : "#94a3b8",
+          }}
+        />
+
+        {monitoringActive
+          ? "Class Monitoring Active"
+          : "Class Not Active"}
+      </div>
+    </header>
+  );
+
+  // ==================================================
+  // DASHBOARD OVERVIEW
+  // ==================================================
+
+  const DashboardSection = () => (
+    <>
+      <Header
+        title="Student Dashboard"
+        subtitle={`Welcome back, ${student.name}! 👋`}
+      />
+
+      {/* OVERVIEW CARDS */}
+
+      <section style={styles.statsGrid}>
+        {/* ATTENDANCE */}
+
+        <div style={styles.statCard}>
+          <div
+            style={{
+              ...styles.statIcon,
+              background: "#dbeafe",
+            }}
+          >
+            📋
+          </div>
+
+          <div>
+            <p style={styles.statLabel}>
+              My Attendance
+            </p>
+
+            <h2 style={styles.statValue}>
+              {attendancePercentage}%
+            </h2>
+
+            <p style={styles.statSmall}>
+              {presentClasses} present /{" "}
+              {totalClasses} classes
+            </p>
+          </div>
+        </div>
+
+        {/* ATTENTION */}
+
+        <div style={styles.statCard}>
+          <div
+            style={{
+              ...styles.statIcon,
+              background: "#dcfce7",
+            }}
+          >
+            👀
+          </div>
+
+          <div>
+            <p style={styles.statLabel}>
+              Attention Score
+            </p>
+
+            <h2 style={styles.statValue}>
+              {attention}%
+            </h2>
+
+            <p style={styles.statSmall}>
+              During monitoring
+            </p>
+          </div>
+        </div>
+
+        {/* EMOTION */}
+
+        <div style={styles.statCard}>
+          <div
+            style={{
+              ...styles.statIcon,
+              background: "#fef3c7",
+            }}
+          >
+            😊
+          </div>
+
+          <div>
+            <p style={styles.statLabel}>
+              Current Emotion
+            </p>
+
+            <h2 style={styles.emotionValue}>
+              {emotion}
+            </h2>
+
+            <p style={styles.statSmall}>
+              AI detected
+            </p>
+          </div>
+        </div>
+
+        {/* DISTRACTION */}
+
+        <div style={styles.statCard}>
+          <div
+            style={{
+              ...styles.statIcon,
+              background: "#fee2e2",
+            }}
+          >
+            ⚠️
+          </div>
+
+          <div>
+            <p style={styles.statLabel}>
+              Distraction
+            </p>
+
+            <h2 style={styles.emotionValue}>
+              {distraction}
+            </h2>
+
+            <p style={styles.statSmall}>
+              Current status
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* SHORT SUMMARY */}
+
+      <section style={styles.twoColumn}>
+        <div style={styles.card}>
+          <div style={styles.cardHeader}>
+            <div>
+              <h2 style={styles.cardTitle}>
+                👤 My Details
+              </h2>
+
+              <p style={styles.cardSubtitle}>
+                Quick profile information
+              </p>
+            </div>
+          </div>
+
+          <div style={styles.profileDetails}>
+            <div style={styles.detailRow}>
+              <span style={styles.detailLabel}>
+                Full Name
+              </span>
+
+              <strong style={styles.detailValue}>
+                {student.name}
+              </strong>
+            </div>
+
+            <div style={styles.detailRow}>
+              <span style={styles.detailLabel}>
+                Roll Number
+              </span>
+
+              <strong style={styles.detailValue}>
+                {student.rollNo}
+              </strong>
+            </div>
+
+            <div style={styles.detailRow}>
+              <span style={styles.detailLabel}>
+                Department
+              </span>
+
+              <strong style={styles.detailValue}>
+                {student.department}
+              </strong>
+            </div>
+
+            <div style={styles.detailRow}>
+              <span style={styles.detailLabel}>
+                Semester
+              </span>
+
+              <strong style={styles.detailValue}>
+                {student.semester}
+              </strong>
+            </div>
+          </div>
+
+          <button
+            onClick={() =>
+              selectSection("profile")
+            }
+            style={styles.viewButton}
+          >
+            View My Profile →
+          </button>
+        </div>
+
+        <div style={styles.card}>
+          <div style={styles.cardHeader}>
+            <div>
+              <h2 style={styles.cardTitle}>
+                🤖 AI Class Performance
+              </h2>
+
+              <p style={styles.cardSubtitle}>
+                Current classroom analysis
+              </p>
+            </div>
+          </div>
+
+          <div style={styles.performanceItem}>
+            <div style={styles.performanceTop}>
+              <span>👀 Attention</span>
+
+              <strong>
+                {attention}%
+              </strong>
+            </div>
+
+            <div style={styles.progressBackground}>
+              <div
+                style={{
+                  ...styles.progressBar,
+                  width: `${Math.min(
+                    Math.max(attention, 0),
+                    100
+                  )}%`,
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={styles.performanceItem}>
+            <div style={styles.performanceTop}>
+              <span>📋 Attendance</span>
+
+              <strong>
+                {attendancePercentage}%
+              </strong>
+            </div>
+
+            <div style={styles.progressBackground}>
+              <div
+                style={{
+                  ...styles.progressBar,
+                  width: `${attendancePercentage}%`,
+                }}
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={() =>
+              selectSection("performance")
+            }
+            style={styles.viewButton}
+          >
+            View My Performance →
+          </button>
+        </div>
+      </section>
+    </>
+  );
+
+  // ==================================================
+  // PROFILE SECTION
+  // ==================================================
+
+  const ProfileSection = () => (
+    <>
+      <Header
+        title="My Profile"
+        subtitle="Your registered student information"
+      />
+
+      <section style={styles.card}>
+        <div style={styles.cardHeader}>
+          <div>
+            <h2 style={styles.cardTitle}>
+              👤 My Details
+            </h2>
+
+            <p style={styles.cardSubtitle}>
+              Your complete registered information
+            </p>
+          </div>
+        </div>
+
+        <div style={styles.profileDetails}>
+          <div style={styles.detailRow}>
+            <span style={styles.detailLabel}>
+              Full Name
+            </span>
+
+            <strong style={styles.detailValue}>
+              {student.name}
+            </strong>
+          </div>
+
+          <div style={styles.detailRow}>
+            <span style={styles.detailLabel}>
+              Roll Number
+            </span>
+
+            <strong style={styles.detailValue}>
+              {student.rollNo}
+            </strong>
+          </div>
+
+          <div style={styles.detailRow}>
+            <span style={styles.detailLabel}>
+              Email
+            </span>
+
+            <strong style={styles.detailValue}>
+              {student.email}
+            </strong>
+          </div>
+
+          <div style={styles.detailRow}>
+            <span style={styles.detailLabel}>
+              Phone
+            </span>
+
+            <strong style={styles.detailValue}>
+              {student.phone}
+            </strong>
+          </div>
+
+          <div style={styles.detailRow}>
+            <span style={styles.detailLabel}>
+              Department
+            </span>
+
+            <strong style={styles.detailValue}>
+              {student.department}
+            </strong>
+          </div>
+
+          <div style={styles.detailRow}>
+            <span style={styles.detailLabel}>
+              Semester
+            </span>
+
+            <strong style={styles.detailValue}>
+              {student.semester}
+            </strong>
+          </div>
+
+          <div style={styles.detailRow}>
+            <span style={styles.detailLabel}>
+              Account Status
+            </span>
+
+            <span style={styles.activeBadge}>
+              ● Active
+            </span>
+          </div>
+        </div>
+
+        {/* DELETE PROFILE */}
+
+        <div style={styles.deleteSection}>
+          <div>
+            <h3 style={styles.deleteTitle}>
+              Delete My Profile
+            </h3>
+
+            <p style={styles.deleteText}>
+              Permanently remove your registered
+              student account and attendance data.
+            </p>
+          </div>
+
+          <button
+            onClick={handleDeleteProfile}
+            style={styles.deleteButton}
+          >
+            🗑️ Delete My Profile
+          </button>
+        </div>
+      </section>
+    </>
+  );
+
+  // ==================================================
+  // ATTENDANCE SECTION
+  // ==================================================
+
+  const AttendanceSection = () => (
+    <>
+      <Header
+        title="My Attendance"
+        subtitle="View your classroom attendance history"
+      />
+
+      <section style={styles.card}>
+        <div style={styles.cardHeader}>
+          <div>
+            <h2 style={styles.cardTitle}>
+              📅 My Attendance History
+            </h2>
+
+            <p style={styles.cardSubtitle}>
+              Your recorded classroom attendance
+            </p>
+          </div>
+
+          <div style={styles.attendanceSummary}>
+            {presentClasses} / {totalClasses}{" "}
+            Classes Present
+          </div>
+        </div>
+
+        {/* ATTENDANCE SUMMARY */}
+
+        <div style={styles.attendanceCards}>
+          <div style={styles.attendanceMiniCard}>
+            <span>📚</span>
+
+            <div>
+              <p>Total Classes</p>
+
+              <strong>
+                {totalClasses}
+              </strong>
+            </div>
+          </div>
+
+          <div
+            style={{
+              ...styles.attendanceMiniCard,
+              background: "#f0fdf4",
+            }}
+          >
+            <span>✅</span>
+
+            <div>
+              <p>Present</p>
+
+              <strong
+                style={{ color: "#15803d" }}
+              >
+                {presentClasses}
+              </strong>
+            </div>
+          </div>
+
+          <div
+            style={{
+              ...styles.attendanceMiniCard,
+              background: "#fef2f2",
+            }}
+          >
+            <span>❌</span>
+
+            <div>
+              <p>Absent</p>
+
+              <strong
+                style={{ color: "#dc2626" }}
+              >
+                {absentClasses}
+              </strong>
+            </div>
+          </div>
+
+          <div
+            style={{
+              ...styles.attendanceMiniCard,
+              background: "#eff6ff",
+            }}
+          >
+            <span>📊</span>
+
+            <div>
+              <p>Attendance</p>
+
+              <strong
+                style={{ color: "#2563eb" }}
+              >
+                {attendancePercentage}%
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        {attendance.length === 0 ? (
+          <div style={styles.emptyState}>
+            <div style={styles.emptyIcon}>
+              📋
+            </div>
+
+            <h3>
+              No Attendance Records Yet
+            </h3>
+
+            <p>
+              Your attendance will appear here
+              after you attend a monitored class.
+            </p>
+          </div>
+        ) : (
+          <div style={styles.tableWrapper}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>
+                    Date
+                  </th>
+
+                  <th style={styles.th}>
+                    Status
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {attendance.map(
+                  (record, index) => (
+                    <tr key={index}>
+                      <td style={styles.td}>
+                        {record.date}
+                      </td>
+
+                      <td style={styles.td}>
+                        <span
+                          style={
+                            record.status
+                              ?.toLowerCase() ===
+                            "present"
+                              ? styles.presentBadge
+                              : styles.absentBadge
+                          }
+                        >
+                          {record.status
+                            ?.toLowerCase() ===
+                          "present"
+                            ? "✓ Present"
+                            : "✕ Absent"}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </>
+  );
+
+  // ==================================================
+  // PERFORMANCE SECTION
+  // ==================================================
+
+  const PerformanceSection = () => (
+    <>
+      <Header
+        title="My Performance"
+        subtitle="View your AI classroom performance"
+      />
+
+      {/* PERFORMANCE CARDS */}
+
+      <section style={styles.statsGrid}>
+        <div style={styles.statCard}>
+          <div
+            style={{
+              ...styles.statIcon,
+              background: "#dcfce7",
+            }}
+          >
+            👀
+          </div>
+
+          <div>
+            <p style={styles.statLabel}>
+              Attention Score
+            </p>
+
+            <h2 style={styles.statValue}>
+              {attention}%
+            </h2>
+
+            <p style={styles.statSmall}>
+              During monitoring
+            </p>
+          </div>
+        </div>
+
+        <div style={styles.statCard}>
+          <div
+            style={{
+              ...styles.statIcon,
+              background: "#fef3c7",
+            }}
+          >
+            😊
+          </div>
+
+          <div>
+            <p style={styles.statLabel}>
+              Current Emotion
+            </p>
+
+            <h2 style={styles.emotionValue}>
+              {emotion}
+            </h2>
+
+            <p style={styles.statSmall}>
+              AI detected
+            </p>
+          </div>
+        </div>
+
+        <div style={styles.statCard}>
+          <div
+            style={{
+              ...styles.statIcon,
+              background: "#fee2e2",
+            }}
+          >
+            ⚠️
+          </div>
+
+          <div>
+            <p style={styles.statLabel}>
+              Distraction
+            </p>
+
+            <h2 style={styles.emotionValue}>
+              {distraction}
+            </h2>
+
+            <p style={styles.statSmall}>
+              Current status
+            </p>
+          </div>
+        </div>
+
+        <div style={styles.statCard}>
+          <div
+            style={{
+              ...styles.statIcon,
+              background: "#dbeafe",
+            }}
+          >
+            📋
+          </div>
+
+          <div>
+            <p style={styles.statLabel}>
+              Attendance
+            </p>
+
+            <h2 style={styles.statValue}>
+              {attendancePercentage}%
+            </h2>
+
+            <p style={styles.statSmall}>
+              Overall attendance
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* AI PERFORMANCE */}
+
+      <section style={styles.card}>
+        <div style={styles.cardHeader}>
+          <div>
+            <h2 style={styles.cardTitle}>
+              🤖 AI Class Performance
+            </h2>
+
+            <p style={styles.cardSubtitle}>
+              Your latest classroom analysis
+            </p>
+          </div>
+        </div>
+
+        {/* ATTENTION */}
+
+        <div style={styles.performanceItem}>
+          <div style={styles.performanceTop}>
+            <span>👀 Attention</span>
+
+            <strong>
+              {attention}%
+            </strong>
+          </div>
+
+          <div style={styles.progressBackground}>
+            <div
+              style={{
+                ...styles.progressBar,
+                width: `${Math.min(
+                  Math.max(attention, 0),
+                  100
+                )}%`,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* ATTENDANCE */}
+
+        <div style={styles.performanceItem}>
+          <div style={styles.performanceTop}>
+            <span>📋 Attendance</span>
+
+            <strong>
+              {attendancePercentage}%
+            </strong>
+          </div>
+
+          <div style={styles.progressBackground}>
+            <div
+              style={{
+                ...styles.progressBar,
+                width: `${attendancePercentage}%`,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* EMOTION */}
+
+        <div style={styles.aiBox}>
+          <span style={styles.aiEmoji}>
+            😊
+          </span>
+
+          <div>
+            <strong>
+              Current Emotion
+            </strong>
+
+            <p style={styles.aiText}>
+              {emotion}
+            </p>
+          </div>
+        </div>
+
+        {/* DISTRACTION */}
+
+        <div style={styles.aiBox}>
+          <span style={styles.aiEmoji}>
+            🎯
+          </span>
+
+          <div>
+            <strong>
+              Distraction Status
+            </strong>
+
+            <p style={styles.aiText}>
+              {distraction}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* INFORMATION */}
+
+      <section style={styles.performanceMessage}>
+        <div style={styles.messageIcon}>
+          💡
+        </div>
+
+        <div>
+          <h3 style={styles.messageTitle}>
+            Keep improving your classroom
+            performance!
+          </h3>
+
+          <p style={styles.messageText}>
+            Attend classes regularly and stay
+            focused during lectures. Your AI
+            classroom analytics will help you
+            understand your attendance, attention
+            and classroom engagement.
+          </p>
+        </div>
+      </section>
+    </>
+  );
+
+  // ==================================================
+  // MAIN CONTENT
   // ==================================================
 
   return (
     <div style={styles.page}>
-
-      {/* ============================================ */}
-      {/* SIDEBAR */}
-      {/* ============================================ */}
-
-      <aside style={styles.sidebar}>
-
-        <div style={styles.logoSection}>
-
-          <div style={styles.logoIcon}>
-            🤖
-          </div>
-
-          <div>
-            <div style={styles.logoTitle}>
-              AI CLASSROOM
-            </div>
-
-            <div style={styles.logoSubtitle}>
-              Student Portal
-            </div>
-          </div>
-
-        </div>
-
-        {/* STUDENT PROFILE */}
-
-        <div style={styles.profileBox}>
-
-          {student.photo ? (
-            <img
-              src={student.photo}
-              alt="Student"
-              style={styles.profileImage}
-            />
-          ) : (
-            <div style={styles.profileInitial}>
-              {student.name
-                ?.charAt(0)
-                ?.toUpperCase()}
-            </div>
-          )}
-
-          <div style={styles.profileInfo}>
-
-            <strong style={styles.profileName}>
-              {student.name}
-            </strong>
-
-            <span style={styles.profileRole}>
-              Student
-            </span>
-
-          </div>
-
-        </div>
-
-        {/* NAVIGATION */}
-
-        <nav style={styles.nav}>
-
-          <div style={styles.navTitle}>
-            MY CLASSROOM
-          </div>
-
-          <Link
-            to="/student-dashboard"
-            style={{
-              ...styles.navItem,
-              ...styles.activeNav,
-            }}
-          >
-            🏠 Dashboard
-          </Link>
-
-          <a
-            href="#profile"
-            style={styles.navItem}
-          >
-            👤 My Profile
-          </a>
-
-          <a
-            href="#attendance"
-            style={styles.navItem}
-          >
-            📋 My Attendance
-          </a>
-
-          <a
-            href="#performance"
-            style={styles.navItem}
-          >
-            📊 My Performance
-          </a>
-
-        </nav>
-
-        {/* LOGOUT */}
-
-        <button
-          onClick={handleLogout}
-          style={styles.logoutButton}
-        >
-          🚪 Logout
-        </button>
-
-      </aside>
-
-      {/* ============================================ */}
-      {/* MAIN CONTENT */}
-      {/* ============================================ */}
+      <Sidebar />
 
       <main style={styles.main}>
-
-        {/* HEADER */}
-
-        <header style={styles.header}>
-
-          <div>
-            <h1 style={styles.heading}>
-              Student Dashboard
-            </h1>
-
-            <p style={styles.welcome}>
-              Welcome back, {student.name}! 👋
-            </p>
-          </div>
-
-          <div style={styles.classStatus}>
-
-            <span
-              style={{
-                ...styles.statusDot,
-                backgroundColor: monitoringActive
-                  ? "#22c55e"
-                  : "#94a3b8",
-              }}
-            />
-
-            {monitoringActive
-              ? "Class Monitoring Active"
-              : "Class Not Active"}
-
-          </div>
-
-        </header>
-
-        {/* ======================================== */}
-        {/* PERFORMANCE CARDS */}
-        {/* ======================================== */}
-
-        <section
-          id="performance"
-          style={styles.statsGrid}
-        >
-
-          {/* ATTENDANCE */}
-
-          <div style={styles.statCard}>
-
-            <div
-              style={{
-                ...styles.statIcon,
-                background: "#dbeafe",
-              }}
-            >
-              📋
-            </div>
-
-            <div>
-
-              <p style={styles.statLabel}>
-                My Attendance
-              </p>
-
-              <h2 style={styles.statValue}>
-                {attendancePercentage}%
-              </h2>
-
-              <p style={styles.statSmall}>
-                {presentClasses} present / {totalClasses} classes
-              </p>
-
-            </div>
-
-          </div>
-
-          {/* ATTENTION */}
-
-          <div style={styles.statCard}>
-
-            <div
-              style={{
-                ...styles.statIcon,
-                background: "#dcfce7",
-              }}
-            >
-              👀
-            </div>
-
-            <div>
-
-              <p style={styles.statLabel}>
-                Attention Score
-              </p>
-
-              <h2 style={styles.statValue}>
-                {attention}%
-              </h2>
-
-              <p style={styles.statSmall}>
-                During monitoring
-              </p>
-
-            </div>
-
-          </div>
-
-          {/* EMOTION */}
-
-          <div style={styles.statCard}>
-
-            <div
-              style={{
-                ...styles.statIcon,
-                background: "#fef3c7",
-              }}
-            >
-              😊
-            </div>
-
-            <div>
-
-              <p style={styles.statLabel}>
-                Current Emotion
-              </p>
-
-              <h2 style={styles.emotionValue}>
-                {emotion}
-              </h2>
-
-              <p style={styles.statSmall}>
-                AI detected
-              </p>
-
-            </div>
-
-          </div>
-
-          {/* DISTRACTION */}
-
-          <div style={styles.statCard}>
-
-            <div
-              style={{
-                ...styles.statIcon,
-                background: "#fee2e2",
-              }}
-            >
-              ⚠️
-            </div>
-
-            <div>
-
-              <p style={styles.statLabel}>
-                Distraction
-              </p>
-
-              <h2 style={styles.emotionValue}>
-                {distraction}
-              </h2>
-
-              <p style={styles.statSmall}>
-                Current status
-              </p>
-
-            </div>
-
-          </div>
-
-        </section>
-
-        {/* ======================================== */}
-        {/* PROFILE + PERFORMANCE */}
-        {/* ======================================== */}
-
-        <section
-          id="profile"
-          style={styles.twoColumn}
-        >
-
-          {/* PROFILE */}
-
-          <div style={styles.card}>
-
-            <div style={styles.cardHeader}>
-
-              <div>
-
-                <h2 style={styles.cardTitle}>
-                  👤 My Details
-                </h2>
-
-                <p style={styles.cardSubtitle}>
-                  Your registered student information
-                </p>
-
-              </div>
-
-            </div>
-
-            <div style={styles.profileDetails}>
-
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>
-                  Full Name
-                </span>
-
-                <strong style={styles.detailValue}>
-                  {student.name}
-                </strong>
-              </div>
-
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>
-                  Roll Number
-                </span>
-
-                <strong style={styles.detailValue}>
-                  {student.rollNo}
-                </strong>
-              </div>
-
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>
-                  Email
-                </span>
-
-                <strong style={styles.detailValue}>
-                  {student.email}
-                </strong>
-              </div>
-
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>
-                  Phone
-                </span>
-
-                <strong style={styles.detailValue}>
-                  {student.phone}
-                </strong>
-              </div>
-
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>
-                  Department
-                </span>
-
-                <strong style={styles.detailValue}>
-                  {student.department}
-                </strong>
-              </div>
-
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>
-                  Semester
-                </span>
-
-                <strong style={styles.detailValue}>
-                  {student.semester}
-                </strong>
-              </div>
-
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>
-                  Account Status
-                </span>
-
-                <span style={styles.activeBadge}>
-                  ● Active
-                </span>
-              </div>
-
-            </div>
-
-            {/* DELETE PROFILE */}
-
-            <div style={styles.deleteSection}>
-
-              <div>
-
-                <h3 style={styles.deleteTitle}>
-                  Delete My Profile
-                </h3>
-
-                <p style={styles.deleteText}>
-                  Permanently remove your registered
-                  student account and attendance data.
-                </p>
-
-              </div>
-
-              <button
-                onClick={handleDeleteProfile}
-                style={styles.deleteButton}
-              >
-                🗑️ Delete My Profile
-              </button>
-
-            </div>
-
-          </div>
-
-          {/* AI PERFORMANCE */}
-
-          <div style={styles.card}>
-
-            <div style={styles.cardHeader}>
-
-              <div>
-
-                <h2 style={styles.cardTitle}>
-                  🤖 AI Class Performance
-                </h2>
-
-                <p style={styles.cardSubtitle}>
-                  Your latest classroom analysis
-                </p>
-
-              </div>
-
-            </div>
-
-            {/* ATTENTION */}
-
-            <div style={styles.performanceItem}>
-
-              <div style={styles.performanceTop}>
-
-                <span>
-                  👀 Attention
-                </span>
-
-                <strong>
-                  {attention}%
-                </strong>
-
-              </div>
-
-              <div style={styles.progressBackground}>
-
-                <div
-                  style={{
-                    ...styles.progressBar,
-                    width: `${Math.min(
-                      Math.max(attention, 0),
-                      100
-                    )}%`,
-                  }}
-                />
-
-              </div>
-
-            </div>
-
-            {/* ATTENDANCE */}
-
-            <div style={styles.performanceItem}>
-
-              <div style={styles.performanceTop}>
-
-                <span>
-                  📋 Attendance
-                </span>
-
-                <strong>
-                  {attendancePercentage}%
-                </strong>
-
-              </div>
-
-              <div style={styles.progressBackground}>
-
-                <div
-                  style={{
-                    ...styles.progressBar,
-                    width: `${attendancePercentage}%`,
-                  }}
-                />
-
-              </div>
-
-            </div>
-
-            {/* EMOTION */}
-
-            <div style={styles.aiBox}>
-
-              <span style={styles.aiEmoji}>
-                😊
-              </span>
-
-              <div>
-
-                <strong>
-                  Current Emotion
-                </strong>
-
-                <p style={styles.aiText}>
-                  {emotion}
-                </p>
-
-              </div>
-
-            </div>
-
-            {/* DISTRACTION */}
-
-            <div style={styles.aiBox}>
-
-              <span style={styles.aiEmoji}>
-                🎯
-              </span>
-
-              <div>
-
-                <strong>
-                  Distraction Status
-                </strong>
-
-                <p style={styles.aiText}>
-                  {distraction}
-                </p>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </section>
-
-        {/* ======================================== */}
-        {/* ATTENDANCE HISTORY */}
-        {/* ======================================== */}
-
-        <section
-          id="attendance"
-          style={styles.card}
-        >
-
-          <div style={styles.cardHeader}>
-
-            <div>
-
-              <h2 style={styles.cardTitle}>
-                📅 My Attendance History
-              </h2>
-
-              <p style={styles.cardSubtitle}>
-                Your recorded classroom attendance
-              </p>
-
-            </div>
-
-            <div style={styles.attendanceSummary}>
-              {presentClasses} / {totalClasses} Classes Present
-            </div>
-
-          </div>
-
-          {attendance.length === 0 ? (
-            <div style={styles.emptyState}>
-
-              <div style={styles.emptyIcon}>
-                📋
-              </div>
-
-              <h3>
-                No Attendance Records Yet
-              </h3>
-
-              <p>
-                Your attendance will appear here
-                after you attend a monitored class.
-              </p>
-
-            </div>
-          ) : (
-            <div style={styles.tableWrapper}>
-
-              <table style={styles.table}>
-
-                <thead>
-
-                  <tr>
-
-                    <th style={styles.th}>
-                      Date
-                    </th>
-
-                    <th style={styles.th}>
-                      Status
-                    </th>
-
-                  </tr>
-
-                </thead>
-
-                <tbody>
-
-                  {attendance.map(
-                    (record, index) => (
-
-                      <tr key={index}>
-
-                        <td style={styles.td}>
-                          {record.date}
-                        </td>
-
-                        <td style={styles.td}>
-
-                          <span
-                            style={
-                              record.status?.toLowerCase() ===
-                              "present"
-                                ? styles.presentBadge
-                                : styles.absentBadge
-                            }
-                          >
-
-                            {record.status?.toLowerCase() ===
-                            "present"
-                              ? "✓ Present"
-                              : "✕ Absent"}
-
-                          </span>
-
-                        </td>
-
-                      </tr>
-
-                    )
-                  )}
-
-                </tbody>
-
-              </table>
-
-            </div>
-          )}
-
-        </section>
-
-        {/* ======================================== */}
-        {/* PERFORMANCE MESSAGE */}
-        {/* ======================================== */}
-
-        <section style={styles.performanceMessage}>
-
-          <div style={styles.messageIcon}>
-            💡
-          </div>
-
-          <div>
-
-            <h3 style={styles.messageTitle}>
-              Keep improving your classroom performance!
-            </h3>
-
-            <p style={styles.messageText}>
-              Attend classes regularly and stay focused
-              during lectures. Your AI classroom analytics
-              will help you understand your attendance,
-              attention and classroom engagement.
-            </p>
-
-          </div>
-
-        </section>
-
-        {/* FOOTER */}
+        {activeSection === "dashboard" && (
+          <DashboardSection />
+        )}
+
+        {activeSection === "profile" && (
+          <ProfileSection />
+        )}
+
+        {activeSection === "attendance" && (
+          <AttendanceSection />
+        )}
+
+        {activeSection === "performance" && (
+          <PerformanceSection />
+        )}
 
         <footer style={styles.footer}>
-          🤖 AI Smart Classroom • Student Dashboard
+          🤖 AI Smart Classroom • Student Portal
         </footer>
-
       </main>
-
     </div>
   );
 }
@@ -1242,12 +1522,18 @@ const styles = {
 
   navItem: {
     display: "block",
+    width: "100%",
+    boxSizing: "border-box",
+    border: "none",
+    background: "transparent",
     color: "#cbd5e1",
+    textAlign: "left",
     textDecoration: "none",
     padding: "11px 12px",
     borderRadius: "9px",
     marginBottom: "5px",
     fontSize: "13px",
+    cursor: "pointer",
   },
 
   activeNav: {
@@ -1341,6 +1627,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     fontSize: "23px",
+    flexShrink: 0,
   },
 
   statLabel: {
@@ -1417,7 +1704,7 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     gap: "20px",
-    padding: "11px 0",
+    padding: "13px 0",
     borderBottom: "1px solid #f1f5f9",
     fontSize: "12px",
   },
@@ -1478,6 +1765,18 @@ const styles = {
       "0 4px 10px rgba(220, 38, 38, 0.20)",
   },
 
+  viewButton: {
+    marginTop: "18px",
+    border: "none",
+    background: "#eff6ff",
+    color: "#2563eb",
+    padding: "10px 15px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontSize: "11px",
+    fontWeight: "700",
+  },
+
   performanceItem: {
     marginBottom: "21px",
   },
@@ -1509,7 +1808,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "12px",
-    padding: "12px",
+    padding: "14px",
     background: "#f8fafc",
     borderRadius: "10px",
     marginTop: "10px",
@@ -1532,6 +1831,23 @@ const styles = {
     borderRadius: "20px",
     fontSize: "11px",
     fontWeight: "700",
+  },
+
+  attendanceCards: {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(4, minmax(0, 1fr))",
+    gap: "12px",
+    marginBottom: "22px",
+  },
+
+  attendanceMiniCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    background: "#f8fafc",
+    padding: "14px",
+    borderRadius: "10px",
   },
 
   tableWrapper: {
@@ -1621,7 +1937,7 @@ const styles = {
     textAlign: "center",
     color: "#94a3b8",
     fontSize: "10px",
-    paddingBottom: "20px",
+    padding: "5px 0 20px",
   },
 
   loading: {
